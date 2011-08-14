@@ -1,0 +1,268 @@
+DAT Image File
+Author: Jagged Fel (jaggedfel621@gmail.com)
+Site: http://idmr.empirereborn.net
+Released: 2010.02.14
+=====
+
+The .DAT file used in X-wing Alliance is an archive file that can contain
+hundreds of images pertaining to map icons, mouse cursors, inflight backdrops,
+etc. Portions of the format are similar or directly ripped from the .ACT format
+of TIE and XvT. The images are separated into "Groups" and "Subs", with the
+Group being the base image, and the Sub being variants or animation frames.
+
+=====
+DAT Structure
+
+The following values are used through this and all of my file definitions
+unless otherwise specified:
+NAME	LENGTH	DESC
+----	------	----
+BYTE	1	unsigned 8-bit
+SHORT	2	signed Int16
+INT	4	signed Int32
+LONG	8	signed Int64
+
+--
+FileHeader
+GroupHeader[File.NumberOfGroups]
+Group[File.NumberOfGroups]
+--
+
+struct FileHeader (size 0x22)
+{
+	0x00	LONG	Reserved (0x5602235657062357)
+	0x08	SHORT	Reserved (1)
+	0x0A	SHORT	NumberOfGroups
+	0x0C	SHORT	NumberOfSubs
+	0x0E	INT	Length
+	0x12	INT	NumberOfColors
+	0x16	LONG	Reserved (0)
+	0x1E	INT	DataStartOffset
+}
+
+struct GroupHeader (size 0x18)
+{
+	0x00	SHORT	GroupID
+	0x02	SHORT	NumberOfSubs
+	0x04	INT	GroupLength
+	0x08	INT	NumberOfColors
+	0x0C	LONG	Reserved (0)
+	0x14	INT	DataOffset
+}
+
+struct Group
+{
+	Sub[GroupHeader.NumberOfSubs]
+}
+
+struct Sub
+{
+	0x00	SubHeader
+	0x12	ImageHeader
+	0x3E	Colors[ImageHeader.NumberOfColors]
+		Row[Height]
+		#if (Type==7 || Type==23)
+		BYTE	Reserved (0)
+		#endif
+}
+
+struct SubHeader (size 0x12)
+{
+	0x00	SHORT	Type
+	0x02	SHORT	Width
+	0x04	SHORT	Height
+	0x06	INT	Reserved (0)
+	0x0A	SHORT	GroupID
+	0x0C	SHORT	SubID
+	0x0E	INT	Length
+}
+
+struct ImageHeader (size 0x2C)
+{
+	// actually an ACT FrameHeader with Type being the Shift value
+	0x00	INT	SubHeader.Length
+	0x04	INT	ImageHeaderLength (0x2C)
+	0x08	INT	ImageDataOffset
+	0x0C	INT	SubHeader.Length
+	0x10	INT	Width
+	0x14	INT	Height
+	0x18	LONG	Reserved (0)
+	0x20	INT	Type
+	0x24	INT	Reserved (0x18)
+	0x28	INT	NumberOfColors
+}
+
+struct Color (size 0x3)
+{
+	BYTE	Red
+	BYTE	Green
+	BYTE	Blue
+}
+
+struct Row
+{
+	#if (Type==7 || Type==23)
+	BYTE	NumberOfOperations
+	OpCode[NumberOfOperations]
+	#elseif (Type==24)
+	Pixel[Width]
+	#endif
+}
+
+struct OpCode
+{
+	BYTE	Value
+	#if (Type==7 && ~Value & 0x80) (Read)
+	BYTE[Value &0x7F]	ColorIndexes
+	#elseif (Type==23 && Value & 0xC0) (Read with Alpha)
+	Pixel[Value & 0x3F]
+	#elseif (Type==23 && Value < 0x40) (Read Opaque)
+	BYTE[Value]
+	#else (Short Transparent)
+	#endif
+}
+
+struct Pixel
+{
+	#if (Type==23)
+	BYTE	Alpha
+	#endif
+	BYTE	ColorIndex
+	#if (Type==24)
+	BYTE	Alpha
+	#endif
+}
+
+=====
+DAT Structure Details
+
+Yet another image format for the X-wing series, although this one is XWA only.
+Three different raw formats are bundled under this one type, the difference is
+the type of bitmaps that are displayed. More on that in a sec.
+
+As mentioned at the beginning, the images are categorized as Groups and Subs.
+In my other graphical format write-ups you can equate this to Images and Frames
+but for the DAT files I will stick to existing naming conventions to make it
+easier for DATech and XDC users.
+
+Three sections make up the DAT archive, the FileHeader, GroupHeader array, and
+the Groups themselves.
+
+-- FileHeader --
+
+The main file header is fairly simple, the only issue is the large Reserved
+value that starts off the file. When you use a file extension as omnipresent as
+".dat", I guess you really do need some big ugly number to stand out. Doesn't
+even convert to text nicely.
+
+NumberOfGroups is one-indexed, as is NumberOfSubs which is the total for the
+file. The Length value is the sum of GroupHeader.Length values. Likewise, the
+NumberOfColors value is simply the sum of GroupHeader.NumberOfColors values. A
+LONG of zeros, then the offset from the end of the file header to the first
+Group data, which equates to NumberOfGroups * 0x18. If you remove the first
+Reserved values, you can call the FileHeader just a modifed GroupHeader.
+
+-- GroupHeader --
+
+Every Group within XWA has a unique ID number, this is how XWA finds the
+appropriate image to display when it's needed. If you install custom images and
+botch the Group or Sub ID, you're not going to get the results you're looking
+for.
+
+NumberOfSubs should be simple enough, this is a one-indexed value. GroupLength
+is the total length occupied by the Group's Subs. NumberOfColors is the total
+one-indexed sum of all Color declarations in the Group's Subs, not just unique
+values.
+
+The DataOffset value once read is the offset at which the first Sub of that
+Group is defined, also equals the sum of previous GroupHeader.GroupLength
+values. The first Group will always have a value of zero. Using these values
+alone a jump table can be constructed to the separate groups. This is similar
+to the FrameOffset value in ACT files.
+GroupHeader[0].DataOffset = 0
+GroupHeader[i].DataOffset = GroupHeader[i-1].DataOffset + GroupHeader[i-1].Length
+
+-- Group and Sub --
+
+I'm throwing these under the same subheader because there's really nothing to
+the Group struct, it just makes organization and code easier to write. There is
+no physical separation between Groups, if you were reading a hex dump the only
+clue would be that the IDs change in the images.
+
+Subs contain two headers, one for the sub itself and the other is actually the
+heading from the ACT image format. Why they felt the need to use the ACT header
+is unknown, unless they just modified the existing read/write code with a new
+type. The Type determines the type (gasp) of image and how it needs to be read.
+0x07	Bitmap with transparency, compressed
+0x17	Alpha blended bitmap, compressed
+0x18	Alpha blended bitmap, uncompressed
+
+Width and Height are easy enough, they're one-indexed values. The GroupID and
+SubID values should also be self-explanatory. SubHeader.Length could also be
+viewed as the offset to the next sub; the value is the total length of the
+following ImageHeader, Color array and Row array. Similar to how the DataOffset
+values of the GroupHeader array could create a jump table for the groups,
+reading the Length values can build a jump table of the Subs within the Group.
+
+ImageHeader starts off with a value we just left behind, and it'll show up a
+third time in a sec. ImageHeaderLength is a constant 0x2C. ImageDataOffset is
+the offset from the beginning of the ImageHeader to the first Row. Equates to
+0x2C+4+NumberOfColors*3. Working down the rest of the header, a lot of values
+we've seen already, and NumberOfColors finishes it off.
+
+The Colors array is a simple 3-byte RGB list, with the first index being the
+transparency color. Typically it's (0,0,0), and if black is used in the image
+it tends to be the second index as well.
+
+-- Rows --
+
+Okay, here's where most of the magic happens. The only common similarity
+between the three Types are the length of the Rows array itself, and that they
+are all indexed color images.
+
+First off, Type 7; Transparent. Mostly used as the backdrop type, it also
+has the tightest compression rate for filesize. The Row starts off with the
+NumberOfOperations value. That determines the length of the OpCode array, which
+at most will have a total size of Width*2. Being true to the ACT format, the
+OpCodes behave with a Shift value of 7, meaning that 7 bits are used for the
+width of the operation in pixels for a maximum of 127px.
+
+If the top bit of the OpCode is used (value >= 0x80) then the operation only
+occupies a single byte, and defines a length of transparent pixels. Simply
+subtract 0x80 from the value to get the pixel length.
+
+If the top bit is not used, then it is a simple Read operation. The face value
+of the OpCode is the number of consecutive ColorIndexes to be read. In both
+cases, another OpCode immediately follows the last value until the end of the
+row. The end of the image is marked by zero byte.
+
+Type 23 (0x17); Blended. A good example of these would be the cockpit overlays,
+allows partial transparency. Like Type 7, The Row starts off with the
+NumberOfOperations followed by the OpCode array. OpCode behaviour is that of
+Shift 6, so only the bottom 6 bits are used for lengths, meaning a maximum of
+63px can be defined in one shot.
+
+The 0x80 and 0x40 bits have two different uses to determine the OpCode's
+behaviour together. When both are used (Value >= 0xC0) it is the same as the
+Transparent Repeat from Type 7, only as stated previously there's 6 bits for
+the length value.
+
+When 0x80 is true and 0x40 is not (0x80 <= Value < 0xC0) it is a Read
+operation, but with the Pixel array instead of straight ColorIndexes. For each
+pixel, the ColorIndex is preceded by its Alpha value which defines the opacity.
+A value of 255 is completely visible, and zero is completely transparent. XDC I
+know displays this Type without the blending, it assumes all are visible.
+That's why if you look in Craft_Icons.dat you'll see Group 14100 with some
+"ghosting" on the side. Those are actually transparent pixels, I don't know why
+they're even there.
+
+When neither bit is used (Value < 0x40) then it is a plain Read operation.
+The length of bytes is read and treated as Alpha 255, completely opaque. Like
+Type 7, the end of the image data is marked with a zero byte.
+
+Type 24 (0x18); Uncompressed Blended. No compression at all, this Type requires
+two bytes per pixel; the ColorIndex first, and then the Alpha value, which
+again goes from 0 transparent to 255 opaque. This type does not use an
+end-of-image marker. Back to Craft_Icons.dat again, if you remove the Alpha
+channel you'll see that the Subs are actually stacked on top of each other,
+they used the Alpha channel to remove old pixels instead of leaving them blank.
