@@ -2,6 +2,7 @@ DAT Image File
 Author: Jagged Fel (jaggedfel621@gmail.com)
 Site: http://idmr.empirereborn.net
 Released: 2010.02.14
+Updated: 2011.10.22
 =====
 
 The .DAT file used in X-wing Alliance is an archive file that can contain
@@ -37,14 +38,14 @@ struct FileHeader (size 0x22)
 	0x0E	INT	Length
 	0x12	INT	NumberOfColors
 	0x16	LONG	Reserved (0)
-	0x1E	INT	DataStartOffset
+	0x1E	INT	DataOffset
 }
 
 struct GroupHeader (size 0x18)
 {
 	0x00	SHORT	GroupID
 	0x02	SHORT	NumberOfSubs
-	0x04	INT	GroupLength
+	0x04	INT	Length
 	0x08	INT	NumberOfColors
 	0x0C	LONG	Reserved (0)
 	0x14	INT	DataOffset
@@ -84,10 +85,13 @@ struct ImageHeader (size 0x2C)
 	0x04	INT	ImageHeaderLength (0x2C)
 	0x08	INT	ImageDataOffset
 	0x0C	INT	SubHeader.Length
-	0x10	INT	Width
-	0x14	INT	Height
+	0x10	SHORT	Width	(low value INT)
+	0x12	SHORT	Reserved (0)
+	0x14	SHORT	Height	(low value INT)
+	0x16	SHORT	Reserved (0)
 	0x18	LONG	Reserved (0)
-	0x20	INT	Type
+	0x20	SHORT	Type	(low value INT)
+	0x22	SHORT	Reserved (0)
 	0x24	INT	Reserved (0x18)
 	0x28	INT	NumberOfColors
 }
@@ -169,8 +173,8 @@ appropriate image to display when it's needed. If you install custom images and
 botch the Group or Sub ID, you're not going to get the results you're looking
 for.
 
-NumberOfSubs should be simple enough, this is a one-indexed value. GroupLength
-is the total length occupied by the Group's Subs. NumberOfColors is the total
+NumberOfSubs should be simple enough, this is a one-indexed value. Length is
+the total length occupied by the Group's Subs. NumberOfColors is the total
 one-indexed sum of all Color declarations in the Group's Subs, not just unique
 values.
 
@@ -193,9 +197,9 @@ Subs contain two headers, one for the sub itself and the other is actually the
 heading from the ACT image format. Why they felt the need to use the ACT header
 is unknown, unless they just modified the existing read/write code with a new
 type. The Type determines the type (gasp) of image and how it needs to be read.
-0x07	Bitmap with transparency, compressed
-0x17	Alpha blended bitmap, compressed
-0x18	Alpha blended bitmap, uncompressed
+0x07	Bitmap with transparency (8bpp), compressed
+0x17	Alpha blended bitmap (32bpp), compressed
+0x18	Alpha blended bitmap (32bpp), uncompressed
 
 Width and Height are easy enough, they're one-indexed values. The GroupID and
 SubID values should also be self-explanatory. SubHeader.Length could also be
@@ -207,8 +211,10 @@ reading the Length values can build a jump table of the Subs within the Group.
 ImageHeader starts off with a value we just left behind, and it'll show up a
 third time in a sec. ImageHeaderLength is a constant 0x2C. ImageDataOffset is
 the offset from the beginning of the ImageHeader to the first Row. Equates to
-0x2C+4+NumberOfColors*3. Working down the rest of the header, a lot of values
-we've seen already, and NumberOfColors finishes it off.
+0x2C+NumberOfColors*3. For those of you paying attention, this means the total
+length of the Row array is SubHeader.Length-ImageDataOffset. Working down the
+rest of the header, a lot of values we've seen already, and NumberOfColors
+finishes it off.
 
 The Colors array is a simple 3-byte RGB list, with the first index being the
 transparency color. Typically it's (0,0,0), and if black is used in the image

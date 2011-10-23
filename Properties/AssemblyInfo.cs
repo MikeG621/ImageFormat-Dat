@@ -1,6 +1,7 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2010 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Licensed under the GPL v3.0 or later
  * 
  * Full notice in Dat.cs
  */
@@ -15,7 +16,7 @@ using System.Reflection;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Imperial Department of Military Research")]
 [assembly: AssemblyProduct("Idmr.ImageFormat.Dat")]
-[assembly: AssemblyCopyright("Copyright © Michael Gaisser 2010")]
+[assembly: AssemblyCopyright("Copyright © Michael Gaisser 2009-2011")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -26,4 +27,4 @@ using System.Reflection;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("1.0.2.*")]
+[assembly: AssemblyVersion("1.1.*")]
