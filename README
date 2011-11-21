@@ -6,12 +6,11 @@ Copyright (C) Michael Gaisser, 2009-2011
 
 Instructions:
 -Add Dat.cs to your project
--Add System.Drawing to your references
+-Add System.Drawing and Idmr.Common to your references
 
 File format structure can be found in DAT_Image_File.txt
 
 TODO:
--Write capability
 -Help file
 
 Code is licensed under the GNU General Pulic License (GPL) v3.0 or later
