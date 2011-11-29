@@ -1,4 +1,12 @@
-﻿using System;
+﻿/*
+ * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
+ * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Licensed under the GPL v3.0 or later
+ * 
+ * Full notice in DatFile.cs
+ */
+
+using System;
 
 namespace Idmr.ImageFormat.Dat
 {
@@ -16,6 +24,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Creates a Collection with multiple initial Groups</summary>
 		/// <param name="quantity">Number of Groups to start with</param>
 		/// <exception cref="System.ArgumentException"><i>quantity</i> is not positive</exception>
+		/// <remarks>Individual Groups remain uninitialized</remarks>
 		public GroupCollection(int quantity)
 		{
 			if (quantity < 1) throw new ArgumentException("quantity must be positive", "quantity");
@@ -34,32 +43,32 @@ namespace Idmr.ImageFormat.Dat
 		#endregion constructors
 		
 		#region public methods
-		/// <summary>Add an empty Group with the given ID</summary>
+		/// <summary>Adds an empty Group with the given ID</summary>
 		/// <param name="groupID">ID value for the new Group</param>
 		/// <exception cref="System.ArgumentException">groupID is already in use</exception>
 		/// <returns>Index of the Group within the Collection</returns>
 		/// <remarks>Group is added and then the Collection is sorted by ascending ID</remarks>
 		public int Add(short groupID) { return _add(new DatFile.Group(groupID)); }
-		/// <summary>Add an empty Group with the given ID</summary>
+		/// <summary>Adds a Group with the given ID and Subs created from <i>images</i></summary>
 		/// <param name="groupID">ID value for the new Group</param>
-		/// <exception cref="System.ArgumentException">groupID is already in use, or images are not 8bppIndexed</exception>
+		/// <param name="images">Images from which to create the Subs</param>
+		/// <exception cref="System.ArgumentException"><i>groupID</i> is already in use, or <i>images</i> are not all 8bppIndexed</exception>
 		/// <returns>Index of the Group within the Collection</returns>
 		/// <remarks>Group is added and then the Collection is sorted by ascending ID. <i>images</i> must all be 8bppIndexed and are initialized as ImageType.Transparent.<br>
-		/// To use Blended images, Subs must individually have their Type changed and use SetTransparencyMask()</remarks>
+		/// To use Blended images, Subs must individually have their Type changed and use SetTransparencyMask( )</remarks>
 		public int Add(short groupID, System.Drawing.Bitmap[] images)
 		{
 			if (GetIndex(groupID) != -1) throw new ArgumentException("Group ID " + groupID + " already in use", "groupID");
 			// check that first so time isn't wasted on image processing
 			return _add(new DatFile.Group(groupID, images));
 		}
-		/// <summary>Add a Group populated with the given Subs</summary>
+		/// <summary>Adds a Group populated with the given Collection of Subs</summary>
 		/// <param name="subs">Subs to be included in the Group</param>
 		/// <exception cref="System.ArgumentException">Group.ID is already in use</exception>
 		/// <returns>Index of the Group within the Collection</returns>
 		/// <remarks>Group is added and then the Collection is sorted by ascending SubID</remarks>
 		public int Add(SubCollection subs) { return _add(new DatFile.Group(subs)); }
-		// Add (SubCollection)
-		/// <summary>Add a Group to the Collection</summary>
+		/// <summary>Adds a Group to the Collection</summary>
 		/// <param name="group">Group to be added</param>
 		/// <exception cref="System.ArgumentException">Group.ID is already in use</exception>
 		/// <returns>Index of the Group within the Collection</returns>
@@ -67,17 +76,17 @@ namespace Idmr.ImageFormat.Dat
 		public int Add(DatFile.Group group) { return _add(group); }
 		
 		/// <summary>Empties the Collection of entries</summary>
-		/// <remarks>All existing messages are lost, Count is set to zero</remarks>
+		/// <remarks>All existing Groups are lost, Count is set to zero</remarks>
 		public void Clear()
 		{
 			_count = 0;
 			_items = null;
 		}
 
-		/// <summary>Delete the specified Group from the Collection</summary>
+		/// <summary>Deletes the specified Group from the Collection</summary>
 		/// <param name="index">Group index</param>
 		/// <returns><i>true</i> if successful, <i>false</i> for invalid <i>index</i> value</returns>
-		/// <remarks>If only Group is specified, executes Clear()</remarks>
+		/// <remarks>If only Group is specified, executes Clear( )</remarks>
 		public bool Remove(int index) { return _remove(index); }
 		
 		/// <summary>Deletes the Group with the specified ID</summary>
@@ -125,6 +134,30 @@ namespace Idmr.ImageFormat.Dat
 		
 		/// <summary>Gets the number of objects in the Collection</summary>
 		public int Count { get { return _count; } }
+		
+		/// <summary>Gets the total number of colors defined in the Collection</summary>
+		/// <remarks>Equals the sum of <i>this[].NumberOfColors</i> values</remarks>
+		public int NumberOfColors
+		{
+			get
+			{
+				int n = 0;
+				for(int i = 0; i < (_items != null ? _count : -1); i++) n += _items[i].NumberOfColors;
+				return n;
+			}
+		}
+		
+		/// <summary>Gets the total number of Subs defined in the file</summary>
+		/// <remarks>Equals the sum of <i>Groups[].NumberOfSubs</i> values</remarks>
+		public short NumberOfSubs
+		{
+			get
+			{
+				short n = 0;
+				for (int i = 0; i < (_items != null ? _count : -1); i++) n += _items[i].NumberOfSubs;
+				return n;
+			}
+		}
 		#endregion public properties
 		
 		#region private methods

@@ -1,6 +1,6 @@
 /*
  * Idmr.ImageFormat.Dat, Allows editing capability of LA *.DAT Image files
- * Copyright (C) 2010-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
  * 
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
@@ -44,10 +44,6 @@ namespace Idmr.ImageFormat.Dat
 		static string _valEx = "Validation error, file is not a LucasArts Act Image file or is corrupted.";
 		const long _validationID = 0x5602235657062357;
 		const int _groupHeaderLength = 0x18;
-		/// <summary>Maximum allowable image width</summary>
-		public const short MaximumWidth = 640;
-		/// <summary>Maximum allowable image height</summary>
-		public const short MaximumHeight = 480;
 		
 		/// <summary>Types of image compression</summary>
 		/// <remarks>Transparent = 7; 0-8bbp Indexed, Transparent is Color[0]<br>
@@ -279,7 +275,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Returns the encoded Rows data given the image and settings</summary>
 		/// <param name="image">The image to encode</param>
 		/// <param name="type">The encoding protocol to use</param>
-		/// <param name="colors">The color array to use</colors>
+		/// <param name="colors">The color array to use</param>
 		/// <param name="trimmedImage"><i>image</i> with unused color indexes removed</param>
 		/// <param name="trimmedColors"><i>colors</i> with unused color indexes removed</param>
 		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
@@ -431,10 +427,16 @@ namespace Idmr.ImageFormat.Dat
 		#endregion public methods
 		
 		#region public properties
-		/// <summary>Gets the file name of the Act object</summary>
+		/// <summary>Maximum allowable image width</summary>
+		public const short MaximumWidth = 640;
+		
+		/// <summary>Maximum allowable image height</summary>
+		public const short MaximumHeight = 480;
+		
+		/// <summary>Gets the file name of the Dat object</summary>
 		public string FileName { get { return StringFunctions.GetFileName(_filePath); } }
 		
-		/// <summary>Gets the full path of the Act object</summary>
+		/// <summary>Gets the full path of the Dat object</summary>
 		public string FilePath { get { return _filePath; } }
 		
 		/// <summary>Gets or sets the Collection of Groups in the archive</summary>
@@ -444,32 +446,8 @@ namespace Idmr.ImageFormat.Dat
 			set { _groups = value; }
 		}
 		
-		/// <summary>Gets the total number of colors defined in the file</summary>
-		/// <remarks>Equals the sum of <i>Groups[].NumberOfColors</i> values</remarks>
-		public int NumberOfColors
-		{
-			get
-			{
-				int n = 0;
-				for(int i = 0; i < (_groups != null ? _groups.Count : -1); i++) n += _groups[i].NumberOfColors;
-				return n;
-			}
-		}
-		
-		/// <summary>Gets the number of Groups in the file</summary>
+		/// <summary>Gets the number of Groups in the archive</summary>
 		public short NumberOfGroups { get { return (short)(_groups != null ? _groups.Count : 0); } }
-		
-		/// <summary>Gets the total number of Subs defined in the file</summary>
-		/// <remarks>Equals the sum of <i>Groups[].NumberOfSubs</i> values</remarks>
-		public short NumberOfSubs
-		{
-			get
-			{
-				short n = 0;
-				for (int i = 0; i < (_groups != null ? _groups.Count : -1); i++) n += _groups[i].NumberOfSubs;
-				return n;
-			}
-		}
 		#endregion public properties
 		
 		#region private methods
@@ -565,7 +543,7 @@ namespace Idmr.ImageFormat.Dat
 				_subs = subs;
 			}
 			/// <summary>Create an empty Group with the given ID</summary>
-			/// <param name="id">Group ID</param>
+			/// <param name="id">Group ID value</param>
 			/// <remarks>Subs is set to <i>null</i></remarks>
 			public Group(short groupID)
 			{
@@ -578,7 +556,7 @@ namespace Idmr.ImageFormat.Dat
 			/// <param name="groupID">Group ID value</param>
 			/// <param name="images">Images from which to create the Subs</param>
 			/// <exception cref="System.ArgumentException">Not all images are 8bppIndexed</exception>
-			/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
+			/// <exception cref="Idmr.Common.BoundaryException">Not all images meet allowable dimensions</exception>
 			/// <remarks>Sub.IDs start at 0 and increment by 1. All images must be 8bppIndexed and are initialized as ImageType.Transparent<br>
 			/// To use Blended images, Subs must individually have their Type changed and use SetTransparencyMask()</remarks>
 			public Group(short groupID, Bitmap[] images)
@@ -625,17 +603,6 @@ namespace Idmr.ImageFormat.Dat
 						_subs[i] = s;
 					}
 					ArrayFunctions.WriteToArray(_id, _header, 0);
-				}
-			}
-			/// <summary>Gets the total number of Colors defined within the Group</summary>
-			/// <remarks>Equals the sum of <i>Subs[].NumberOfColors</i> values</remarks>
-			public int NumberOfColors
-			{
-				get
-				{
-					int n = 0;
-					for (int i = 0; i < (_subs != null ? _subs.Count : -1); i++) n += _subs[i].NumberOfColors;
-					return n;
 				}
 			}
 			#endregion public properties
@@ -834,7 +801,7 @@ namespace Idmr.ImageFormat.Dat
 				}
 			}
 
-			/// <summary>Number of Colors defined in the Sub</summary>
+			/// <summary>Gets the number of Colors defined in the Sub</summary>
 			public int NumberOfColors { get { return (_colors != null ? _colors.Length : 0); } }
 
 			/// <summary>Collection of Colors defined by the Sub</summary>

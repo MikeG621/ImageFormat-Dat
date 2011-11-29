@@ -1,4 +1,12 @@
-﻿using System;
+﻿/*
+ * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
+ * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Licensed under the GPL v3.0 or later
+ * 
+ * Full notice in DatFile.cs
+ */
+
+using System;
 
 namespace Idmr.ImageFormat.Dat
 {
@@ -11,13 +19,16 @@ namespace Idmr.ImageFormat.Dat
 		
 		#region constructors
 		/// <summary>Creates an empty Collection</summary>
+		/// <param name="groupID">ID value of the parent Group</param>
 		public SubCollection(short groupID)
 		{
 			_groupID = groupID;
 		}
 		/// <summary>Creates a Collection with multiple initial Subs</summary>
 		/// <param name="quantity">Number of Subs to start with</param>
+		/// <param name="groupID">ID value of the parent Group</param>
 		/// <exception cref="System.ArgumentException"><i>quantity</i> is not positive</exception>
+		/// <remarks>Individual Subs are created with <i>groupID</i> and SubIDs starting from zero. Sub colors and images remain uninitialized</remarks>
 		public SubCollection(int quantity, short groupID)
 		{
 			if (quantity < 1) throw new ArgumentException("quantity must be positive", "quantity");
@@ -36,6 +47,10 @@ namespace Idmr.ImageFormat.Dat
 			GroupID = subs[0].GroupID;
 			_sort();
 		}
+		/// <summary>Creates a Collection and populates it with Subs created from the provided images</summary>
+		/// <param name="groupID">ID value of the parent Group</param>
+		/// <param name="images">Images from which to create the Subs</param>
+		/// <remarks><i>images</i> must all be 8bppIndexed, 640x480 max. Initialized as ImageType.Transparent. If a Blended type is desired, change Type and SetTransparencyMask( )</remarks>
 		public SubCollection(short groupID, System.Drawing.Bitmap[] images)
 		{
 			_count = images.Length;
@@ -46,16 +61,23 @@ namespace Idmr.ImageFormat.Dat
 		#endregion constructors
 		
 		#region public methods
-		// Add (id)
+		/// <summary>Adds an empty Sub</summary>
+		/// <param name="subID">ID value for the new Sub</param>
+		/// <exception cref="System.ArgumentException"><i>subID</i> is already in use</exception>
+		/// <returns>Index of the Sub within the Collection</returns>
+		/// <remarks>Sub is added and then the Collection is sorted by ascending SubID</remarks>
+		public int Add(short subID) { return _add(new DatFile.Sub(_groupID, subID)); }
 		/// <summary>Adds a new Sub with the provided image</summary>
-		/// <param name="subID">SubID value</param>
+		/// <param name="subID">ID value for the new Sub</param>
 		/// <param name="image">Image to be used, must be 8bppIndexed</param>
 		/// <exception cref="System.ArgumentException"><i>image</i> is not formatted properly or <i>subID</i> is already in use</exception>
+		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
 		/// <returns>Index of the Sub within the Collection</returns>
 		/// <remarks>Sub is added and then the Collection is sorted by ascending SubID</remarks>
 		public int Add(short subID, System.Drawing.Bitmap image) { return _add(new DatFile.Sub(_groupID, subID, image)); }
 		/// <summary>Adds a Sub to the Collection</summary>
-		/// <param name="sub">The Sub to add</param>
+		/// <param name="sub">The Sub to be added</param>
+		/// <exception cref="System.ArgumentException"><i>subID</i> is already in use</exception>
 		/// <returns>Index of the Sub within the Collection</returns>
 		/// <remarks>Sub is added with the Collection's GroupID and then the Collection is sorted by ascending SubID</remarks>
 		public int Add(DatFile.Sub sub)
@@ -65,7 +87,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 
 		/// <summary>Empties the Collection of entries</summary>
-		/// <remarks>All existing messages are lost, Count is set to zero</remarks>
+		/// <remarks>All existing Subs are lost, Count is set to zero</remarks>
 		public void Clear()
 		{
 			_count = 0;
@@ -75,13 +97,13 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Delete the specified Sub from the Collection</summary>
 		/// <param name="index">Sub index</param>
 		/// <returns><i>true</i> if successful, <i>false</i> for invalid <i>index</i> value</returns>
-		/// <remarks>If only Sub is specified, executes Clear()</remarks>
+		/// <remarks>If only Sub is specified, executes Clear( )</remarks>
 		public bool Remove(int index) { return _remove(index); }
 		
 		/// <summary>Deletes the Sub with the specified ID</summary>
 		/// <param name="subID">The ID of the Sub to be deleted</param>
 		/// <returns><i>true</i> if successfull, <i>false</i> for invalid <i>subID</i> value</returns>
-		/// <remarks>If only Sub is specified, executes Clear()</remarks>
+		/// <remarks>If only Sub is specified, executes Clear( )</remarks>
 		public bool RemoveByID(short subID) { return _remove(GetIndex(subID)); }
 		
 		/// <summary>Updates the Sub.ID</summary>
@@ -124,6 +146,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Gets the number of objects in the Collection</summary>
 		public int Count { get { return _count; } }
 		
+		/// <summary>Gets or sets the ID value of the defined parent Group</summary>
 		public short GroupID
 		{
 			get { return _groupID; }
@@ -131,6 +154,18 @@ namespace Idmr.ImageFormat.Dat
 			{
 				_groupID = value;
 				for(int i = 0; i < _count; i++) _items[i].GroupID = _groupID;
+			}
+		}
+		
+		/// <summary>Gets the total number of Colors defined within the Collection</summary>
+		/// <remarks>Equals the sum of <i>Subs[].NumberOfColors</i> values</remarks>
+		public int NumberOfColors
+		{
+			get
+			{
+				int n = 0;
+				for (int i = 0; i < (_items != null ? _count : -1); i++) n += _items[i].NumberOfColors;
+				return n;
 			}
 		}
 		#endregion public properties
