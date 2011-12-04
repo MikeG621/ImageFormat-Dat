@@ -98,109 +98,109 @@
 <p><img src="images/struct.gif"> <span><b>public</b> struct</span> Group<br>
 <u>Container for a Group, acts as a simple wrapper for Subs</u><br>
 <div style="margin-left: 25px">
-  <h3>Constructors</h3>
+	<h3>Constructors</h3>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>byte</span>[] header)<br>
-  <u>Create a new Group according to the supplied header information</u><br>
-  <i>header</i> - GroupHeader raw data<br>
-  <b>Exceptions</b><br>
-  <i>System.ArgumentException</i> - <i>header</i> is not the required length</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>byte</span>[] header)<br>
+	<u>Create a new Group according to the supplied header information</u><br>
+	<i>header</i> - GroupHeader raw data<br>
+	<b>Exceptions</b><br>
+	<i>System.ArgumentException</i> - <i>header</i> is not the required length</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>SubCollection</span> subs)<br>
-  <u>Create a new Group and populate with the given SubCollection</u><br>
-  <i>subs</i> - Subs to be included in the Group</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>SubCollection</span> subs)<br>
+	<u>Create a new Group and populate with the given SubCollection</u><br>
+	<i>subs</i> - Subs to be included in the Group</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>short</span> groupID)<br>
-  <u>Create an empty Group with the given ID</u>. <i>Subs</i> is set to <i>null</i><br>
-  <i>groupID</i> - Group ID value</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>short</span> groupID)<br>
+	<u>Create an empty Group with the given ID</u>. <i>Subs</i> is set to <i>null</i><br>
+	<i>groupID</i> - Group ID value</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>short</span> groupID, System.Drawing.<span>Bitmap</span>[] images)<br>
-  <u>Creates a new Group and populates it with the given images</u>. <i>Sub.SubID</i> values start at 0 and increment by 1. All images must be 8bppIndexed and are initialized as ImageType.Transparent. To use Blended images, Subs must individually have their Type changed and use SetTransparencyMask()<br>
-  <i>groupID</i> - Group ID value<br>
-  <i>images</i> - Images from which to create the Subs<br>
-  <b>Exceptions</b><br>
-  <i>System.ArgumentException</i> - Not all images are 8bppIndexed<br>
-  <i>Idmr.Common.BoundaryException</i> - Not all images meet allowable dimensions</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Group(<span>short</span> groupID, System.Drawing.<span>Bitmap</span>[] images)<br>
+	<u>Creates a new Group and populates it with the given images</u>. <i>Sub.SubID</i> values start at 0 and increment by 1. All images must be 8bppIndexed and are initialized as ImageType.Transparent. To use Blended images, Subs must individually have their Type changed and use SetTransparencyMask()<br>
+	<i>groupID</i> - Group ID value<br>
+	<i>images</i> - Images from which to create the Subs<br>
+	<b>Exceptions</b><br>
+	<i>System.ArgumentException</i> - Not all images are 8bppIndexed<br>
+	<i>Idmr.Common.BoundaryException</i> - Not all images meet allowable dimensions</p>
 
-  <h3>Properties</h3>
+	<h3>Properties</h3>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> short</span> ID<br>
-  <u>Gets or Sets the Group Identifier</u>. Updating through GroupCollection.SetID( ) is preferred</p>
+	<p><img src="images/prop.gif"> <span><b>public</b> short</span> ID<br>
+	<u>Gets or Sets the Group Identifier</u>. Updating through GroupCollection.SetID( ) is preferred</p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> int</span> NumberOfSubs<br>
-  <u>Gets the number of Subs within the Group</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b> int</span> NumberOfSubs<br>
+	<u>Gets the number of Subs within the Group</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> SubCollection</span> Subs<br>
-  <u>Gets or sets the Collection of Subs within the Group</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b> SubCollection</span> Subs<br>
+	<u>Gets or sets the Collection of Subs within the Group</u></p>
 </div></p>
 
 <p><img src="images/struct.gif"> <span><b>public</b> struct</span> Sub<br>
 <u>Container for individual images</u><br>
 <div style="margin-left: 25px">
-  <h3>Constructors</h3>
+	<h3>Constructors</h3>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Sub(<span>byte</span>[] raw)<br>
-  <u>Create a new Sub with the provided raw data</u><br>
-  <i>raw</i> - GroupHeader raw data<br>
-  <b>Exceptions</b><br>
-  <i>System.ArgumentException</i> - Validation error</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Sub(<span>byte</span>[] raw)<br>
+	<u>Create a new Sub with the provided raw data</u><br>
+	<i>raw</i> - GroupHeader raw data<br>
+	<b>Exceptions</b><br>
+	<i>System.ArgumentException</i> - Validation error</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Sub(<span>short</span> groupID, <span>short</span> subID)<br>
-  <u>Create an empty Sub</u>. Initialized as ImageType.Transparent. <i>Image</i> and <i>Colors</i> set to <i>null</i><br>
-  <i>groupID</i> - Group ID value<br>
-  <i>subID</i> - Sub ID value</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Sub(<span>short</span> groupID, <span>short</span> subID)<br>
+	<u>Create an empty Sub</u>. Initialized as ImageType.Transparent. <i>Image</i> and <i>Colors</i> set to <i>null</i><br>
+	<i>groupID</i> - Group ID value<br>
+	<i>subID</i> - Sub ID value</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b></span> Sub(<span>short</span> groupID, <span>short</span> subID, System.Drawing.<span>Bitmap</span> image)<br>
-  <u>Create a new sub from the provided image and IDs</u>. <i>image</i> must be 8bppIndexed, 640x480 max. Initialized as ImageType.Transparent. If a Blended type is desired, change Type and SetTransparencyMask( )<br>
-  <i>groupID</i> - Group ID value<br>
-  <i>subID</i> - Sub ID value<br>
-  <i>image</i> - The image to be used<br>
-  <b>Exceptions</b><br>
-  <i>System.ArgumentException</i> - <i>image</i> is not 8bppIndexed<br>
-  <i>Idmr.Common.BoundaryException</i> - <i>image</i> exceeds allowable dimensions</p>
+	<p><img src="images/meth.gif"> <span><b>public</b></span> Sub(<span>short</span> groupID, <span>short</span> subID, System.Drawing.<span>Bitmap</span> image)<br>
+	<u>Create a new sub from the provided image and IDs</u>. <i>image</i> must be 8bppIndexed, 640x480 max. Initialized as ImageType.Transparent. If a Blended type is desired, change Type and SetTransparencyMask( )<br>
+	<i>groupID</i> - Group ID value<br>
+	<i>subID</i> - Sub ID value<br>
+	<i>image</i> - The image to be used<br>
+	<b>Exceptions</b><br>
+	<i>System.ArgumentException</i> - <i>image</i> is not 8bppIndexed<br>
+	<i>Idmr.Common.BoundaryException</i> - <i>image</i> exceeds allowable dimensions</p>
 
-  <h3>Methods</h3>
+	<h3>Methods</h3>
 
-  <p><img src="images/meth.gif"> <span><b>public</b> void</span> SetImage(System.Drawing.<span>Bitmap</span> image)<br>
-  <u>Sets the image of the Sub</u>. <i>image</i> restricted to 640x480<br>
-  <i>image</i> - The image to be used<br>
-  <b>Exceptions</b></br>
-  <i>System.ArgumentException</i> - Invalid <i>image</i> value</p>
+	<p><img src="images/meth.gif"> <span><b>public</b> void</span> SetImage(System.Drawing.<span>Bitmap</span> image)<br>
+	<u>Sets the image of the Sub</u>. <i>image</i> restricted to 640x480<br>
+	<i>image</i> - The image to be used<br>
+	<b>Exceptions</b></br>
+	<i>System.ArgumentException</i> - Invalid <i>image</i> value</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b> void</span> SetImage(System.Drawing.<span>Bitmap</span> image, System.Drawing.<span>Bitmap</span> mask)<br>
-  <u>Sets the image and transparency of the Sub</u>. <i>image</i> restricted to 640x480. <i>mask</i>.Size must match <i>image</i>.Size, must be 8bppIndexed. 0 is transparent, 255 is solid.<br>
-  <i>image</i> - The image to be used<br>
-  <i>mask</i> - The transparency mask to be used. Ignored if Type = Transparent<br>
-  <b>Exceptions</b><br>
-  <i>System.ArgumentException</i> - Invalid <i>image</i> or <i>mask</i> values</p>
+	<p><img src="images/meth.gif"> <span><b>public</b> void</span> SetImage(System.Drawing.<span>Bitmap</span> image, System.Drawing.<span>Bitmap</span> mask)<br>
+	<u>Sets the image and transparency of the Sub</u>. <i>image</i> restricted to 640x480. <i>mask</i>.Size must match <i>image</i>.Size, must be 8bppIndexed. 0 is transparent, 255 is solid.<br>
+	<i>image</i> - The image to be used<br>
+	<i>mask</i> - The transparency mask to be used. Ignored if Type = Transparent<br>
+	<b>Exceptions</b><br>
+	<i>System.ArgumentException</i> - Invalid <i>image</i> or <i>mask</i> values</p>
 
-  <p><img src="images/meth.gif"> <span><b>public</b> void</span> SetTransparencyMask(System.Drawing.<span>Bitmap</span> mask)<br>
-  <u>Sets the transparency of the Sub for Blended types</u>. <i>mask</i>.Size must match <i>Image</i>.Size, must be 8bppIndexed. Index 0 is transparent, 255 is solid. Typically a grayscale image, 0 being black and 255 as white.<br>
-  <i>mask</i> - The transparency mask to be used<br>
-  <i>System.ArgumentException</i> - Invalid <i>mask</i> value</p>
+	<p><img src="images/meth.gif"> <span><b>public</b> void</span> SetTransparencyMask(System.Drawing.<span>Bitmap</span> mask)<br>
+	<u>Sets the transparency of the Sub for Blended types</u>. <i>mask</i>.Size must match <i>Image</i>.Size, must be 8bppIndexed. Index 0 is transparent, 255 is solid. Typically a grayscale image, 0 being black and 255 as white.<br>
+	<i>mask</i> - The transparency mask to be used<br>
+	<i>System.ArgumentException</i> - Invalid <i>mask</i> value</p>
 
-  <h3>Properties</h3>
+	<h3>Properties</h3>
 
-  <p><img src="images/prop.gif"> <span><b>public</b></span> System.Drawing.<span>Color</span>[] Colors<br>
-  <u>Collection of colors defined by the Sub</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b></span> System.Drawing.<span>Color</span>[] Colors<br>
+	<u>Collection of colors defined by the Sub</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> short</span> GroupID<br>
-  <u>Gets or sets the ID of the parent Group</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b> short</span> GroupID<br>
+	<u>Gets or sets the ID of the parent Group</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> short</span> Height<br>
-  <u>Gets the height of the image</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b> short</span> Height<br>
+	<u>Gets the height of the image</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b></span> System.Drawing.<span>Bitmap</span> Image<br>
-  <u>Gets the image of the Sub</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b></span> System.Drawing.<span>Bitmap</span> Image<br>
+	<u>Gets the image of the Sub</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> int</span> NumberOfColors<br>
-  <u>Gets the number of colors defined in the Sub</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b> int</span> NumberOfColors<br>
+	<u>Gets the number of colors defined in the Sub</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> short</span> SubID<br>
-  <u>Gets or sets the ID of the Sub</u></p>
+	<p><img src="images/prop.gif"> <span><b>public</b> short</span> SubID<br>
+	<u>Gets or sets the ID of the Sub</u></p>
 
-  <p><img src="images/prop.gif"> <span><b>public</b> ImageType</span> Type<br>
-  <u>Gets or sets the format of the raw byte data</u>. Transparency data is lost when going to ImageType.Transparent</p>
+	<p><img src="images/prop.gif"> <span><b>public</b> ImageType</span> Type<br>
+	<u>Gets or sets the format of the raw byte data</u>. Transparency data is lost when going to ImageType.Transparent</p>
 </div></p>
 </div>
 <hr>

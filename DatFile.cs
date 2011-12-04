@@ -102,9 +102,9 @@ namespace Idmr.ImageFormat.Dat
 				bw.Write(_validationID);
 				bw.Write((short)1);
 				bw.Write(NumberOfGroups);
-				bw.Write(NumberOfSubs);
+				bw.Write(_groups.NumberOfSubs);
 				bw.Write(_length);
-				bw.Write(NumberOfColors);
+				bw.Write(_groups.NumberOfColors);
 				fs.Position += 8;	// long 0
 				bw.Write(_dataOffset);
 				for (int g = 0; g < NumberOfGroups; g++) bw.Write(_groups[g]._header);
@@ -489,7 +489,7 @@ namespace Idmr.ImageFormat.Dat
 				// GroupID is always up-to-date
 				ArrayFunctions.WriteToArray(_groups[i].NumberOfSubs, _groups[i]._header, 2);
 				ArrayFunctions.WriteToArray(_groups[i]._length, _groups[i]._header, 4);
-				ArrayFunctions.WriteToArray(_groups[i].NumberOfColors, _groups[i]._header, 8);
+				ArrayFunctions.WriteToArray(_groups[i].Subs.NumberOfColors, _groups[i]._header, 8);
 				// Reserved(0) is always up-to-date
 				Group g = _groups[i];
 				if (i == 0) g._dataOffset = 0;

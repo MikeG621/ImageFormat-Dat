@@ -142,7 +142,7 @@ namespace Idmr.ImageFormat.Dat
 			get
 			{
 				int n = 0;
-				for(int i = 0; i < (_items != null ? _count : -1); i++) n += _items[i].NumberOfColors;
+				for(int i = 0; i < (_items != null ? _count : -1); i++) n += _items[i].Subs.NumberOfColors;
 				return n;
 			}
 		}
