@@ -1,6 +1,6 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2012 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the GPL v3.0 or later
  * 
  * Full notice in DatFile.cs
@@ -158,7 +158,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 		
 		/// <summary>Gets the total number of Colors defined within the Collection</summary>
-		/// <remarks>Equals the sum of <i>Subs[].NumberOfColors</i> values</remarks>
+		/// <remarks>Equals the sum of <i>this[].NumberOfColors</i> values</remarks>
 		public int NumberOfColors
 		{
 			get

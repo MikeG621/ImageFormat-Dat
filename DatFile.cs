@@ -1,6 +1,6 @@
 /*
  * Idmr.ImageFormat.Dat, Allows editing capability of LA *.DAT Image files
- * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2012 Michael Gaisser (mjgaisser@gmail.com)
  * 
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
@@ -20,12 +20,7 @@
  */
 
 /* CHANGE LOG
- * 110818 - various, Common.Graphics implementation, removed groupID read in Subs, removed GroupHeader
- * 110827 - exceptions reworked
- * 111012 - Blank cons added, added full editing capability for custom DATs
- * 111026 - Encode/Decode added, internals added
- * 111108 - added calls for StringFunctions and ArrayFunctions
- * 111117 - Collections added, 2.0
+ * 111117 - Version 2.0
 */
 
 using System;
@@ -39,7 +34,7 @@ namespace Idmr.ImageFormat.Dat
 	/// <summary>Object to work with *.DAT image archives found in XWA</summary>
 	public class DatFile
 	{
-		string _filePath;
+		string _filePath = "newfile.dat";
 		GroupCollection _groups = null;
 		static string _valEx = "Validation error, file is not a LucasArts Act Image file or is corrupted.";
 		const long _validationID = 0x5602235657062357;
@@ -56,7 +51,6 @@ namespace Idmr.ImageFormat.Dat
 		/// <remarks>FilePath defaults to "newfile.dat"</remarks>
 		public DatFile()
 		{
-			_filePath = "newfile.dat";
 		}
 		/// <summary>Loads an existing Dat archive</summary>
 		/// <param name="file">Full path to the *.dat file</param>
@@ -282,9 +276,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <remarks>Unused color indexes are removed from both <i>colors</i> and <i>image</i>, the returned array reflects the trimmed parameters</remarks>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
-			string img = "image";
 			if (image.Height > MaximumHeight || image.Width > MaximumWidth)
-				throw new BoundaryException(img, MaximumWidth + "x" + MaximumHeight);
+				throw new BoundaryException("image", MaximumWidth + "x" + MaximumHeight);
 			byte[] mask = null;
 			if (image.PixelFormat == PixelFormat.Format32bppArgb && type == ImageType.Transparent)
 				image = GraphicsFunctions.ConvertTo8bpp(image, colors);

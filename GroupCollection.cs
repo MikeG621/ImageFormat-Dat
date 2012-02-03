@@ -1,6 +1,6 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2012 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the GPL v3.0 or later
  * 
  * Full notice in DatFile.cs
@@ -148,7 +148,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 		
 		/// <summary>Gets the total number of Subs defined in the file</summary>
-		/// <remarks>Equals the sum of <i>Groups[].NumberOfSubs</i> values</remarks>
+		/// <remarks>Equals the sum of <i>this[].NumberOfSubs</i> values</remarks>
 		public short NumberOfSubs
 		{
 			get

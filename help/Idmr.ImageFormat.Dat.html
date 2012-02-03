@@ -90,7 +90,7 @@
 
 <h3>Enumerations</h3>
 
-<p><img src="images/enum.gif"> <span><b>public</b> enum</span> ImageType : <span>short</span> { Transparent = 7, Blended = 24, UncompressedBlended }<br>
+<p><img src="images/enum.gif"> <span><b>public</b> enum</span> ImageType : <span>short</span> { Transparent = 7, Blended = 23, UncompressedBlended }<br>
 <u>Types of image compression</u>. Transparent is 0-8bbp Indexed, transparent color is Color[0]. Blended is 0-16bpp Indexed Alpha compressed. UncompressedBlended is 16bpp Indexed Alpha uncompressed</p>
 
 <h3>Structures</h3>
@@ -255,6 +255,10 @@
 <p><img src="images/meth.gif"> <span><b>public</b> void</span> Clear( )<br>
 <u>Empties the Collection of entries</u>. All existing Groups are lost, Count is set to zero</p>
 
+<p><img src="images/meth.gif"> <span><b>public</b> int</span> GetIndex(<span>short</span> groupID)<br>
+<u>Gets the Collection index of the Group with the provided ID. Returns Collection index if <i>groupID</i> exists, otherwise -1</u><br>
+<i>groupID</i> - Group ID value</p>
+
 <p><img src="images/meth.gif"> <span><b>public</b> bool</span> Remove(<span>int</span> index)<br>
 <u>Deletes the specified Group from the Collection. Returns <i>true</i> if successful, <i>false</i> for invalid <i>index</i> value</u>. If only Group is specified, executes Clear( )<br>
 <i>index</i> - Group index</p>
@@ -270,10 +274,6 @@
 <b>Exceptions</b><br>
 <i>System.ArgumentException</i> - <i>newID</i> is already in use or <i>groupID</i> does not exist</p>
 
-<p><img src="images/meth.gif"> <span><b>public</b> int</span> GetIndex(<span>short</span> groupID)<br>
-<u>Gets the Collection index of the Group with the provided ID. Returns Collection index if <i>groupID</i> exists, otherwise -1</u><br>
-<i>groupID</i> - Group ID value</p>
-
 <h3>Properties</h3>
 
 <p><img src="images/prop.gif"> <span><b>public</b></span> DatFile.<span>Group <b>this</b></span>[<span>int</span> index]<br>
@@ -286,7 +286,7 @@
 <u>Gets the total number of colors defined in the Collection</u>. Equals the sum of <i>this[].NumberOfColors</i> values</p>
 
 <p><img src="images/prop.gif"> <span><b>public</b> short</span> NumberOfSubs<br>
-<u>Gets the total number of Subs defined in the file</u>. Equals the sum of <i>Groups[].NumberOfSubs</i> values</p>
+<u>Gets the total number of Subs defined in the file</u>. Equals the sum of <i>this[].NumberOfSubs</i> values</p>
 </div>
 <hr>
 
@@ -345,6 +345,10 @@
 <p><img src="images/meth.gif"> <span><b>public</b> void</span> Clear( )<br>
 <u>Empties the Collection of entries</u>. All existing Subs are lost, Count is set to zero</p>
 
+<p><img src="images/meth.gif"> <span><b>public</b> int</span> GetIndex(<span>short</span> subID)<br>
+<u>Gets the Collection index of the Sub with the provided ID. Returns Collection index if <i>subID</i> exists, otherwise -1</u><br>
+<i>subID</i> - Sub ID value</p>
+
 <p><img src="images/meth.gif"> <span><b>public</b> bool</span> Remove(<span>int</span> index)<br>
 <u>Deletes the specified Sub from the Collection. Returns <i>true</i> if successful, <i>false</i> for invalid <i>index</i> value</u>. If only Sub is specified, executes Clear( )<br>
 <i>index</i> - Sub index</p>
@@ -360,10 +364,6 @@
 <b>Exceptions</b><br>
 <i>System.ArgumentException</i> - <i>newID</i> is already in use or <i>subID</i> does not exist</p>
 
-<p><img src="images/meth.gif"> <span><b>public</b> int</span> GetIndex(<span>short</span> subID)<br>
-<u>Gets the Collection index of the Sub with the provided ID. Returns Collection index if <i>subID</i> exists, otherwise -1</u><br>
-<i>subID</i> - Sub ID value</p>
-
 <h3>Properties</h3>
 
 <p><img src="images/prop.gif"> <span><b>public</b></span> DatFile.<span>Sub <b>this</b></span>[<span>int</span> index]<br>
@@ -372,18 +372,18 @@
 <p><img src="images/prop.gif"> <span><b>public</b> int</span> Count<br>
 <u>Gets the number of objects in the Collection</u></p>
 
-<p><img src="images/prop.gif"> <span><b>public</b> int</span> NumberOfColors<br>
-<u>Gets the total number of colors defined in the Collection</u>. Equals the sum of <i>Sub[].NumberOfColors</i> values</p>
-
 <p><img src="images/prop.gif"> <span><b>public</b> short</span> GroupID<br>
 <u>Gets or sets the ID value of the defined parent Group</u></p>
+
+<p><img src="images/prop.gif"> <span><b>public</b> int</span> NumberOfColors<br>
+<u>Gets the total number of colors defined in the Collection</u>. Equals the sum of <i>this[].NumberOfColors</i> values</p>
 </div>
 <hr>
 
-Copyright (C) 2009-2011 Michael Gaisser (mjgaisser@gmail.com)<BR><BR>
+Copyright (C) 2009-2012 Michael Gaisser (mjgaisser@gmail.com)<BR><BR>
 This library is free software, distributed under the <a href="http://www.gnu.org/licenses/gpl.html" target=_blank>GNU General Public License</a>.<br>
 This documentation and items contained herein are distributed under the <a href="http://www.gnu.org/licenses/fdl.html" target=_blank>GNU Free Documentation License</a>.<br>
-Publish date: 28 Nov 2011
+Publish date: 02 Jan 2012
 <HR>
 </BODY>
 </HTML>
