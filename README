@@ -1,17 +1,17 @@
 Idmr.ImageFormat.Dat.dll
 
 Library for reading LucasArts *.DAT backdrop files
-v2.0, 02 Jan 2012
+v2.0, 05 May 2012
 
 Copyright (C) Michael Gaisser, 2009-2012
 
 Instructions:
--Add *.cs files to your project
--Add System.Drawing and Idmr.Common to your references
+  -Get latest version of Idmr.Common.dll
+  -Add Idmr.Common.dll and Idmr.ImageFormat.Dat.dll to your references
 
 File format structure can be found in DAT_Image_File.txt
 
-Programmer's reference can be found in help/Idmr.ImageFormat.Dat.html
+Programmer's reference can be found in help/Idmr.ImageFormat.Dat.chm
 
 Code is licensed under the GNU General Pulic License (GPL) v3.0 or later
 Documentation licensed under the GNU Free Documentation License v1.3 or later
