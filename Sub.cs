@@ -4,12 +4,16 @@
  * Licensed under the GPL v3.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.0
+ * VERSION: 2.0.1
  */
 
 /* CHANGE LOG
- * 120405 - split out from DatFile
- * 120406 - added more null checks, allowed SetImage without defined _colors, allowed Colors.set without defined _image
+ * v2.0.1, 121024
+ * [UPD] SetImage uses image.Palette if image is 8bppIndexed
+ * v2.0, 120505
+ * [NEW] more null checks
+ * [UPD] if _colors is null, SetImage uses default 256-color palette
+ * [UPD] allowed Colors.set without defined _image
  */
 
 using System;
@@ -374,9 +378,11 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="image">The image to be used</param>
 		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
 		/// <remarks><i>image</i> restricted to 640x480, unused color indexes will be removed.<br/>
-		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed</remarks>
+		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
+		/// If <i>image</i> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
 		public void SetImage(Bitmap image)
 		{
+			if (image.PixelFormat == PixelFormat.Format8bppIndexed) _colors = image.Palette.Entries;
 			if (_colors == null) _colors = new Bitmap(1, 1, PixelFormat.Format8bppIndexed).Palette.Entries;
 			_rows = EncodeImage(image, _type, (Color[])_colors.Clone(), out _image, out _colors);
 			_headerUpdate();
@@ -388,7 +394,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions<br/><b>-or-</b><br/><i>mask</i> is not the required size</exception>
 		/// <remarks><i>image</i>.Size restricted to <b>640x480</b>, unused color indexes will be removed.<br/>
 		/// <i>mask</i>.Size must match <i>image</i>.Size, must be <see cref="PixelFormat.Format8bppIndexed"/>. Pixel indexes are <b>0</b> for transparent to <b>255</b> for solid.<br/>
-		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed</remarks>
+		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
+		/// If <i>image</i> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
 		public void SetImage(Bitmap image, Bitmap mask)
 		{
 			SetImage(image);

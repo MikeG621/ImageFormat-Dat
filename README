@@ -1,17 +1,54 @@
 Idmr.ImageFormat.Dat.dll
+========================
+
+Author: Michael Gaisser (mjgaisser@gmail.com)
+Version: 2.0.1
+Date: 2012.10.24
 
 Library for reading LucasArts *.DAT backdrop files
-v2.0, 05 May 2012
 
-Copyright (C) Michael Gaisser, 2009-2012
+==========
+Version History
+
+v2.0.1 - 24 Oct 2012
+ - (Sub) SetImage uses image.Palette if image is 8bppIndexed
+ 
+v2.0 - 05 May 2012
+ - (DatFile) _valEx now says Dat instead of Act >.<
+ - (DatFile) Removed _groupsIndexer
+ - (DatFile) Groups now simple property, Groups.set is internal
+ - (DatFile) Group/Sub converted to class
+ - (Group) Removed _subs null checks
+ - (GroupCollection, SubCollection) Added AutoSort
+ - (GroupCollection, SubCollection) Removed _items null checks, instead uses Count checks
+ - (GroupCollection, SubCollection) Now inherits ResizableCollection<>
+ - (GroupCollection, SubCollection) _sort renamed to Sort and made public
+ - (Sub) Added more null checks throughout
+ - (Sub) SetImage uses default 256-color palette is _colors is undefined
+ - (Sub) Colors can now be set without a previously defined _image
+
+==========
+Additional Information
 
 Instructions:
-  -Get latest version of Idmr.Common.dll
-  -Add Idmr.Common.dll and Idmr.ImageFormat.Dat.dll to your references
+ - Get latest version of Idmr.Common.dll (v1.1 or later)
+ - Add Idmr.Common.dll and Idmr.ImageFormat.Dat.dll to your references
 
 File format structure can be found in DAT_Image_File.txt
 
 Programmer's reference can be found in help/Idmr.ImageFormat.Dat.chm
 
-Code is licensed under the GNU General Pulic License (GPL) v3.0 or later
-Documentation licensed under the GNU Free Documentation License v1.3 or later
+==========
+Copyright Information
+
+Copyright (C) Michael Gaisser, 2009-2012
+
+This library file and related files are licensed under the GNU Public License
+or GNU Free Documentation License.  See GPL.txt or FDL.txt as appropriate.
+
+"Star Wars" and related items are trademarks of LucasFilm Ltd and
+LucasArts Entertainment Co.
+
+THESE FILES HAVE BEEN TESTED AND DECLARED FUNCTIONAL, AS SUCH THE AUTHOR CANNOT
+BE HELD RESPONSIBLE OR LIABLE FOR UNWANTED EFFECTS DUE ITS USE OR MISUSE. THIS
+SOFTWARE IS OFFERED AS-IS WITHOUT WARRANTY OF ANY KIND.

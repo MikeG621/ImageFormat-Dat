@@ -4,11 +4,15 @@
  * Licensed under the GPL v3.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.0
+ * VERSION: 2.0.1
  */
 
 /* CHANGE LOG
- * 120405 - added AutoSort, removed _items null checks since Count will be -1, inherit, _sort public
+ * v2.0, 120505
+ * [NEW] AutoSort
+ * [DEL] _items null checks since Count will be -1
+ * [UPD] inherit ResizableCollection<>
+ * [UPD] _sort to Sort and public
  */
 
 using System;

@@ -18,12 +18,15 @@
  * 59 Temple Place, Suite 330
  * Boston, MA 02111-1307 USA
  *
- * VERSION: 2.0
+ * VERSION: 2.0.1
  */
 
 /* CHANGE LOG
- * 120404 - _valEx now says Dat instead of Act >.<
- * 120405 - removed _groupsIndexer, Groups now simple prop, Groups.set is internal, Group/Sub to class
+ * v2.0, 120505
+ * [FIX] _valEx now says Dat instead of Act >.<
+ * [DEL] _groupsIndexer
+ * [UPD] Groups now simple prop, Groups.set is internal
+ * [UPD] Group/Sub converted to class
 */
 
 using System;

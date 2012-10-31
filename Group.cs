@@ -4,11 +4,12 @@
  * Licensed under the GPL v3.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.0
+ * VERSION: 2.0.1
  */
 
 /* CHANGE LOG
- * 120405 - split out from DatFile, removed _subs null checks
+ * v2.0, 120505
+ * [DEL] _subs null checks
  */
 
 using System;
