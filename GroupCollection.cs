@@ -1,13 +1,18 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2012 Michael Gaisser (mjgaisser@gmail.com)
- * Licensed under the GPL v3.0 or later
+ * Copyright (C) 2009-2014 Michael Gaisser (mjgaisser@gmail.com)
+ * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.0.1
+ * VERSION: 2.1
  */
 
 /* CHANGE LOG
+ * v2.1, 141214
+ * [NEW] IsModified implementation
+ * [NEW] SetCount
+ * [UPD] local Clear removed in favor of Clear in ResizableCollection
+ * [UPD] switch to MPL
  * v2.0, 120505
  * [NEW] AutoSort
  * [DEL] _items null checks since Count will be -1
@@ -91,17 +96,19 @@ namespace Idmr.ImageFormat.Dat
 			if (GetIndex(group.ID) != -1) throw new ArgumentException("Group ID " + group.ID + " already in use");
 			int index = _add(group);
 			if (AutoSort) Sort();
+			if (!_isLoading) _isModified = true;
 			return GetIndex(group.ID);
 		}
-		
-		/// <summary>Empties the Collection of entries</summary>
-		/// <remarks>All existing Groups are lost, <see cref="Idmr.Common.FixedSizeCollection{T}.Count"/> is <b>zero</b></remarks>
-		public void Clear() { _items.Clear(); }
 
 		/// <summary>Deletes the specified Group from the Collection</summary>
 		/// <param name="index">Group index</param>
 		/// <returns><b>true</b> if successful, <b>false</b> for invalid <i>index</i> value</returns>
-		public bool Remove(int index) { return (_removeAt(index) != -1); }
+		public bool Remove(int index)
+		{
+			bool success = (_removeAt(index) != -1);
+			if (success) _isModified = true;
+			return success;
+		}
 		
 		/// <summary>Deletes the Group with the specified ID</summary>
 		/// <param name="groupID">The ID of the Group to be deleted</param>
@@ -122,6 +129,7 @@ namespace Idmr.ImageFormat.Dat
 			if (index == -1) throw new ArgumentException("Group ID " + groupID + " does not exist", "groupID");
 			_items[index].ID = newID;
 			if (AutoSort) Sort();
+			if (!_isLoading) _isModified = true;
 			return GetIndex(newID);
 		}
 		
@@ -147,6 +155,36 @@ namespace Idmr.ImageFormat.Dat
 						_items[j + 1] = _items[j];
 						_items[j] = temp;
 					}
+			if (!_isLoading) _isModified = true;
+		}
+
+		/// <summary>Expands or contracts the Collection, populating as necessary</summary>
+		/// <param name="value">The new size of the Collection. Must not be negative.</param>
+		/// <param name="allowTruncate">Controls if the Collection is allowed to get smaller</param>
+		/// <exception cref="InvalidOperationException"><i>value</i> is smaller than <see cref="Count"/> and <i>allowTruncate</i> is <b>false</b>.</exception>
+		/// <exception cref="ArgumentOutOfRangeException"><i>value</i> must be greater than 0.</exception>
+		/// <remarks>If the Collection expands, the new items will be a blank <see cref="Group"/> with incremental <see cref="Group.ID"/> values start from <b>-3000</b>. When truncating, items will be removed starting from the last index.</remarks>
+		public override void SetCount(int value, bool allowTruncate)
+		{
+			if (value == Count) return;
+			else if (value < 0) throw new ArgumentOutOfRangeException("value", "value must not be negative");
+			else if (value == 0) Clear();
+			else if (value < Count)
+			{
+				if (!allowTruncate) throw new InvalidOperationException("Reducing 'value' will cause data loss");
+				else while (Count > value) _removeAt(Count - 1);
+			}
+			else
+			{
+				short newId = -3000;
+				while (Count < value)
+				{
+					while (GetIndex(newId) != -1) newId++;
+					Add(new Group(newId++));
+				}
+				if (AutoSort) Sort();
+			}
+			if (!_isLoading) _isModified = true;
 		}
 		#endregion public methods
 		

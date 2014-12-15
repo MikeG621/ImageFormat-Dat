@@ -1,13 +1,15 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2012 Michael Gaisser (mjgaisser@gmail.com)
- * Licensed under the GPL v3.0 or later
+ * Copyright (C) 2009-2014 Michael Gaisser (mjgaisser@gmail.com)
+ * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.0.1
+ * VERSION: 2.1
  */
 
 /* CHANGE LOG
+ * v2.1, 141214
+ * [UPD] switch to MPL
  * v2.0, 120505
  * [DEL] _subs null checks
  */
