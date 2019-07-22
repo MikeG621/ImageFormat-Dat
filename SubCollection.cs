@@ -1,13 +1,15 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2014 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1
+ * VERSION: 2.1+
  */
 
 /* CHANGE LOG
+ * [UPD] ItemLimit increased to 256
+ * [UPD] added early return in Add if _add fails
  * v2.1, 141214
  * [NEW] IsModified implementation
  * [NEW] SetCount
@@ -40,7 +42,7 @@ namespace Idmr.ImageFormat.Dat
 		{
 			_groupID = groupID;
 			AutoSort = true;
-			_itemLimit = 200;
+			_itemLimit = 256;
 			_items = new List<Sub>(_itemLimit);
 		}
 		/// <summary>Creates a Collection with multiple initial <see cref="Sub">Subs</see></summary>
@@ -52,8 +54,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <see cref="AutoSort"/> is set to <b>true</b></remarks>
 		public SubCollection(int quantity, short groupID)
 		{
-			_itemLimit = 200;
-			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("quantity must be positive and less than " + _itemLimit);
+			_itemLimit = 256;
+			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Sub quantity must be positive and less than " + _itemLimit);
 			_items = new List<Sub>(_itemLimit);
 			_groupID = groupID;
 			for (short i = 0; i < quantity; i++) Add(new Sub(_groupID, i));
@@ -64,7 +66,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <remarks><see cref="Sub.GroupID"/> is defined by first Sub in the array</remarks>
 		public SubCollection(Sub[] subs)
 		{
-			_itemLimit = 200;
+			_itemLimit = 256;
 			_items = new List<Sub>(_itemLimit);
 			for (int i = 0; i < subs.Length; i++) Add(subs[i]);
 			GroupID = subs[0].GroupID;
@@ -76,7 +78,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <see cref="AutoSort"/> is set to <b>true</b>.</remarks>
 		public SubCollection(short groupID, System.Drawing.Bitmap[] images)
 		{
-			_itemLimit = 200;
+			_itemLimit = 256;
 			_items = new List<Sub>(_itemLimit);
 			_groupID = groupID;
 			for(short i = 0; i < images.Length; i++) Add(new Sub(groupID, i, images[i]));
@@ -108,7 +110,8 @@ namespace Idmr.ImageFormat.Dat
 		{
 			sub.GroupID = _groupID;
 			if (GetIndex(sub.SubID) != -1) throw new ArgumentException("Sub ID " + sub.SubID + " already in use");
-			_add(sub);
+			int index = _add(sub);
+			if (index == -1) return index;
 			if (AutoSort) Sort();
 			if (!_isLoading) _isModified = true;
 			return GetIndex(sub.SubID);
@@ -175,9 +178,9 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Expands or contracts the Collection, populating as necessary</summary>
 		/// <param name="value">The new size of the Collection. Must not be negative.</param>
 		/// <param name="allowTruncate">Controls if the Collection is allowed to get smaller</param>
-		/// <exception cref="InvalidOperationException"><i>value</i> is smaller than <see cref="Count"/> and <i>allowTruncate</i> is <b>false</b>.</exception>
+		/// <exception cref="InvalidOperationException"><i>value</i> is smaller than <see cref="FixedSizeCollection{T}.Count"/> and <i>allowTruncate</i> is <b>false</b>.</exception>
 		/// <exception cref="ArgumentOutOfRangeException"><i>value</i> must be greater than 0.</exception>
-		/// <remarks>If the Collection expands, the new items will be a blank <see cref="Group"/> with incremental <see cref="Sub.ID"/> values start from <b>0</b>, skipping over used values. When truncating, items will be removed starting from the last index.</remarks>
+		/// <remarks>If the Collection expands, the new items will be a blank <see cref="Group"/> with incremental <see cref="Sub.SubID"/> values start from <b>0</b>, skipping over used values. When truncating, items will be removed starting from the last index.</remarks>
 		public override void SetCount(int value, bool allowTruncate)
 		{
 			if (value == Count) return;

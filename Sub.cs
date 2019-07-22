@@ -4,10 +4,11 @@
  * Licensed under the GPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1
+ * VERSION: 2.1+
  */
 
 /* CHANGE LOG
+ * [NEW] Format 25, 32bpp ARGB
  * v2.1, 141214
  * [UPD] switch to MPL
  * v2.0.1, 121024
@@ -49,7 +50,9 @@ namespace Idmr.ImageFormat.Dat
 			/// <summary>0-16bpp Indexed Alpha compressed</summary>
 			Blended = 23,
 			/// <summary>16bpp Indexed Alpha uncompressed</summary>
-			UncompressedBlended
+			UncompressedBlended,
+			/// <summary>32bpp ARGB</summary>
+			Full32bppARGB
 		};
 
 		#region constructors
@@ -88,9 +91,9 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="groupID">Group ID value</param>
 		/// <param name="subID">Sub ID value</param>
 		/// <param name="image">The image to be used</param>
-		/// <exception cref="System.ArgumentException"><i>image</i> is not <see cref="PixelFormat.Format8bppIndexed"/></exception>
-		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
-		/// <remarks><i>image</i> must be <see cref="PixelFormat.Format8bppIndexed"/> with <b>640x480</b> maximum dimensions. Initialized as <see cref="ImageType.Transparent"/>.<br/>
+		/// <exception cref="ArgumentException"><paramref name="image"/> is not <see cref="PixelFormat.Format8bppIndexed"/></exception>
+		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions</exception>
+		/// <remarks><paramref name="image"/> must be <see cref="PixelFormat.Format8bppIndexed"/> with <b>640x480</b> maximum dimensions. Initialized as <see cref="ImageType.Transparent"/>.<br/>
 		/// If a Blended type is desired, change <see cref="Type"/> and use <see cref="SetTransparencyMask"/></remarks>
 		public Sub(short groupID, short subID, Bitmap image)
 		{
@@ -111,7 +114,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Create an empty Sub</summary>
 		/// <param name="groupID">Group ID value</param>
 		/// <param name="subID">Sub ID value</param>
-		/// <remarks>Initialized as <b>ImageType.Transparent</b>. <see cref="Image"/> and <see cref="Colors"/> set to <b>null</b></remarks>
+		/// <remarks>Initialized as <see cref="ImageType.Transparent"/>. <see cref="Image"/> and <see cref="Colors"/> set to <b>null</b></remarks>
 		public Sub(short groupID, short subID)
 		{
 			_headers = new byte[_subHeaderLength + _imageHeaderLength];
@@ -135,7 +138,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="height">Image height</param>
 		/// <param name="colors">Defined Color array to be used for the image</param>
 		/// <param name="type">Encoding protocol used for <i>rawData</i></param>
-		/// <returns>If <i>type</i> is <see cref="ImageType.Transparent"/>, returns a <see cref="PixelFormat.Format8bppIndexed"/> image.<br/>
+		/// <returns>If <paramref name="type"/> is <see cref="ImageType.Transparent"/>, returns a <see cref="PixelFormat.Format8bppIndexed"/> image.<br/>
 		/// Otherwise the returned image will be <see cref="PixelFormat.Format32bppArgb"/></returns>
 		public static Bitmap DecodeImage(byte[] rawData, int width, int height, Color[] colors, ImageType type)
 		{
@@ -201,6 +204,7 @@ namespace Idmr.ImageFormat.Dat
 					image.UnlockBits(bdB);
 					break;
 				case ImageType.UncompressedBlended:
+				case ImageType.Full32bppARGB:
 					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
 					BitmapData bdU = GraphicsFunctions.GetBitmapData(image);
 					byte[] pixelUncomp = new byte[bdU.Stride * bdU.Height];
@@ -227,11 +231,11 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="image">The image to encode</param>
 		/// <param name="type">The encoding protocol to use</param>
 		/// <param name="colors">The color array to use</param>
-		/// <param name="trimmedImage"><i>image</i> with unused color indexes removed</param>
-		/// <param name="trimmedColors"><i>colors</i> with unused color indexes removed</param>
-		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
-		/// <remarks>Unused color indexes are removed from both <i>colors</i> and <i>image</i>, the returned array reflects the trimmed parameters</remarks>
-		/// <returns>Encoded byte data of <i>trimmedImage</i></returns>
+		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed</param>
+		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed</param>
+		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions</exception>
+		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters</remarks>
+		/// <returns>Encoded byte data of <paramref name="trimmedImage"/></returns>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
 			if (image.Height > MaximumHeight || image.Width > MaximumWidth)
@@ -351,6 +355,7 @@ namespace Idmr.ImageFormat.Dat
 					}
 					break;
 				case ImageType.UncompressedBlended:
+				case ImageType.Full32bppARGB:
 					for (int y = 0; y < bd.Height; y++)
 					{
 						for (int x = 0, pos = bd.Stride * y; x < bd.Width; x++)
@@ -360,9 +365,8 @@ namespace Idmr.ImageFormat.Dat
 						}
 					}
 					break;
-
 			}
-			if (type != ImageType.UncompressedBlended) offset++;	// EndSub
+			if (type != ImageType.UncompressedBlended && type != ImageType.Full32bppARGB) offset++;	// EndSub
 			GraphicsFunctions.CopyBytesToImage(pixels, bd);	// because we messed with colors indexes
 			image.UnlockBits(bd);
 			if (type != ImageType.Transparent)
@@ -378,10 +382,10 @@ namespace Idmr.ImageFormat.Dat
 
 		/// <summary>Sets the image of the Sub</summary>
 		/// <param name="image">The image to be used</param>
-		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
-		/// <remarks><i>image</i> restricted to 640x480, unused color indexes will be removed.<br/>
+		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions</exception>
+		/// <remarks><paramref name="image"/> restricted to 640x480, unused color indexes will be removed.<br/>
 		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
-		/// If <i>image</i> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
+		/// If <paramref name="image"/> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
 		public void SetImage(Bitmap image)
 		{
 			if (image.PixelFormat == PixelFormat.Format8bppIndexed) _colors = image.Palette.Entries;
@@ -392,12 +396,12 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Sets the image and transparency of the Sub</summary>
 		/// <param name="image">The image to be used</param>
 		/// <param name="mask">The transparency mask to be used. Ignored if <see cref="Type"/> is <see cref="ImageType.Transparent"/></param>
-		/// <exception cref="ArgumentException">Invalid <i>mask</i> PixelFormat</exception>
-		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions<br/><b>-or-</b><br/><i>mask</i> is not the required size</exception>
-		/// <remarks><i>image</i>.Size restricted to <b>640x480</b>, unused color indexes will be removed.<br/>
-		/// <i>mask</i>.Size must match <i>image</i>.Size, must be <see cref="PixelFormat.Format8bppIndexed"/>. Pixel indexes are <b>0</b> for transparent to <b>255</b> for solid.<br/>
+		/// <exception cref="ArgumentException">Invalid <paramref name="mask"/> PixelFormat</exception>
+		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions<br/><b>-or-</b><br/><paramref name="mask"/> is not the required size</exception>
+		/// <remarks><paramref name="image"/>.Size restricted to <b>640x480</b>, unused color indexes will be removed.<br/>
+		/// <paramref name="mask"/>.Size must match <paramref name="image"/>.Size, must be <see cref="PixelFormat.Format8bppIndexed"/>. Pixel indexes are <b>0</b> for transparent to <b>255</b> for solid.<br/>
 		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
-		/// If <i>image</i> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
+		/// If <paramref name="image"/> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
 		public void SetImage(Bitmap image, Bitmap mask)
 		{
 			SetImage(image);
@@ -406,11 +410,11 @@ namespace Idmr.ImageFormat.Dat
 
 		/// <summary>Sets the transparency of the Sub for Blended types</summary>
 		/// <param name="mask">The transparency mask to be used.</param>
-		/// <exception cref="ArgumentException">Invalid <i>mask</i> <see cref="PixelFormat"/></exception>
+		/// <exception cref="ArgumentException">Invalid <paramref name="mask"/> <see cref="PixelFormat"/></exception>
 		/// <exception cref="InvalidOperationException"><see cref="Image"/> must be defined before the mask can be set</exception>
-		/// <exception cref="Idmr.Common.BoundaryException"><i>mask</i> is not the required size</exception>
+		/// <exception cref="BoundaryException"><paramref name="mask"/> is not the required size</exception>
 		/// <remarks>No effect if <see cref="Type"/> is <see cref="ImageType.Transparent"/>.<br/>
-		/// <i>mask</i>.Size must match <see cref="Image"/>.Size, must be <see cref="PixelFormat.Format8bppIndexed"/>.<br/>
+		/// <paramref name="mask"/>.Size must match <see cref="Image"/>.Size, must be <see cref="PixelFormat.Format8bppIndexed"/>.<br/>
 		///	Pixel indexes are <b>0</b> for transparent to <b>255</b> for solid. This is best done with a grayscale image, 0 being black and 255 as white.</remarks>
 		public void SetTransparencyMask(Bitmap mask)
 		{

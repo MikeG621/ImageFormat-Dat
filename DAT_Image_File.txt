@@ -200,6 +200,7 @@ type. The Type determines the type (gasp) of image and how it needs to be read.
 0x07	Bitmap with transparency (8bpp), compressed
 0x17	Alpha blended bitmap (32bpp), compressed
 0x18	Alpha blended bitmap (32bpp), uncompressed
+0x19	Full ARGB image (32bpp), uncompressed
 
 Width and Height are easy enough, they're one-indexed values. The GroupID and
 SubID values should also be self-explanatory. SubHeader.Length could also be
@@ -272,3 +273,8 @@ again goes from 0 transparent to 255 opaque. This type does not use an
 end-of-image marker. Back to Craft_Icons.dat again, if you remove the Alpha
 channel you'll see that the Subs are actually stacked on top of each other,
 they used the Alpha channel to remove old pixels instead of leaving them blank.
+
+Type 25 (0x19); Full ARGB. No compression, this type is encoded the same as
+Type 24, however when using the appropriate hook to modify the game, it will
+display the image with its true 8-bit Alpha instead of the down-converted
+value when used as a backdrop.

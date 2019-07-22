@@ -1,6 +1,6 @@
 /*
  * Idmr.ImageFormat.Dat, Allows editing capability of LA *.DAT Image files
- * Copyright (C) 2009-2014 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
  * 
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the Mozilla Public License; either version 2.0 of the
@@ -13,10 +13,11 @@
  * If a copy of the MPL (MPL.txt) was not distributed with this file,
  * you can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * VERSION: 2.1
+ * VERSION: 2.1+
  */
 
 /* CHANGE LOG
+ * [NEW] UsedHeight, UsedWidth
  * v2.1, 141214
  * [UPD] switch to MPL
  * v2.0, 120505
@@ -47,7 +48,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 		/// <summary>Loads an existing Dat archive</summary>
 		/// <param name="file">Full path to the *.dat file</param>
-		/// <exception cref="Idmr.Common.LoadFileException">File cannot be loaded</exception>
+		/// <exception cref="LoadFileException">File cannot be loaded</exception>
 		public DatFile(string file)
 		{
 			FileStream fs = null;
@@ -183,8 +184,33 @@ namespace Idmr.ImageFormat.Dat
 		
 		/// <summary>Gets the number of Groups in the archive</summary>
 		public short NumberOfGroups { get { return (short)Groups.Count; } }
+
+		/// <summary>Gets the maximum height used for all images</summary>
+		public short UsedHeight
+		{
+			get
+			{
+				short h = -1;
+				foreach (Group g in Groups)
+					foreach (Sub s in g.Subs)
+						if (s.Height > h) h = s.Height;
+				return h;
+			}
+		}
+		/// <summary>Gets the maximum width used for all images</summary>
+		public short UsedWidth
+		{
+			get
+			{
+				short w = -1;
+				foreach (Group g in Groups)
+					foreach (Sub s in g.Subs)
+						if (s.Width > w) w = s.Width;
+				return w;
+			}
+		}
 		#endregion public properties
-		
+
 		void _updateGroupHeaders()
 		{
 			for (int i = 0; i < Groups.Count; i++)
