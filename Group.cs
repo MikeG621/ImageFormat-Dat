@@ -1,13 +1,14 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2014 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1
+ * VERSION: 2.1+
  */
 
 /* CHANGE LOG
+ * [DEL] max image size checks
  * v2.1, 141214
  * [UPD] switch to MPL
  * v2.0, 120505
@@ -32,7 +33,7 @@ namespace Idmr.ImageFormat.Dat
 		#region constructors
 		/// <summary>Creates a new Group according to the supplied header information</summary>
 		/// <param name="header">GroupHeader raw data, must have a length of 24</param>
-		/// <exception cref="System.ArgumentException"><i>header</i> is not the required length</exception>
+		/// <exception cref="ArgumentException"><paramref name="header"/> is not the required length</exception>
 		public Group(byte[] header)
 		{
 			if (header.Length != _headerLength) throw new ArgumentException("header must have a length of " + _headerLength, "header");
@@ -62,9 +63,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Creates a new Group and populates it with the given images</summary>
 		/// <param name="groupID">Group ID value</param>
 		/// <param name="images">Images from which to create the Subs</param>
-		/// <exception cref="System.ArgumentException">Not all <i>images</i> are 8bppIndexed</exception>
-		/// <exception cref="Idmr.Common.BoundaryException">Not all <i>images</i> meet allowable dimensions</exception>
-		/// <remarks><see cref="Sub.SubID"/> starts at <b>0</b> and increments by 1. All <i>images</i> must be 8bppIndexed and are initialized as <b>ImageType.Transparent</b><br/>
+		/// <exception cref="ArgumentException">Not all <paramref name="images"/> are 8bppIndexed</exception>
+		/// <remarks><see cref="Sub.SubID"/> starts at <b>0</b> and increments by 1. All <paramref name="images"/> must be 8bppIndexed and are initialized as <see cref="Sub.ImageType.Transparent"/><br/>
 		/// To use Blended images, <see cref="Subs"/> must individually have their <see cref="Sub.Type"/> changed and use <see cref="Sub.SetTransparencyMask"/></remarks>
 		public Group(short groupID, Bitmap[] images)
 		{
@@ -72,8 +72,6 @@ namespace Idmr.ImageFormat.Dat
 			{
 				if (images[i].PixelFormat != PixelFormat.Format8bppIndexed)
 					throw new ArgumentException("All images must be 8bppIndexed", "images[" + i + "]");
-				if (images[i].Width > Sub.MaximumWidth || images[i].Height > Sub.MaximumHeight)
-					throw new BoundaryException("images[" + i + "]", Sub.MaximumWidth + "x" + Sub.MaximumHeight);
 			}
 			_header = new byte[_headerLength];
 			_id = groupID;

@@ -9,6 +9,7 @@
 
 /* CHANGE LOG
  * [NEW] Format 25, 32bpp ARGB
+ * [DEL] max image limits
  * v2.1, 141214
  * [UPD] switch to MPL
  * v2.0.1, 121024
@@ -92,13 +93,10 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="subID">Sub ID value</param>
 		/// <param name="image">The image to be used</param>
 		/// <exception cref="ArgumentException"><paramref name="image"/> is not <see cref="PixelFormat.Format8bppIndexed"/></exception>
-		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions</exception>
 		/// <remarks><paramref name="image"/> must be <see cref="PixelFormat.Format8bppIndexed"/> with <b>640x480</b> maximum dimensions. Initialized as <see cref="ImageType.Transparent"/>.<br/>
 		/// If a Blended type is desired, change <see cref="Type"/> and use <see cref="SetTransparencyMask"/></remarks>
 		public Sub(short groupID, short subID, Bitmap image)
 		{
-			if (image.Height > MaximumHeight || image.Width > MaximumWidth)
-				throw new BoundaryException("image", MaximumWidth + "x" + MaximumHeight);
 			if (image.PixelFormat != PixelFormat.Format8bppIndexed) throw new ArgumentException("image must be 8bppIndexed", "image");
 			_headers = new byte[_subHeaderLength + _imageHeaderLength];
 			_groupID = groupID;
@@ -233,13 +231,10 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="colors">The color array to use</param>
 		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed</param>
 		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed</param>
-		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions</exception>
 		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters</remarks>
 		/// <returns>Encoded byte data of <paramref name="trimmedImage"/></returns>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
-			if (image.Height > MaximumHeight || image.Width > MaximumWidth)
-				throw new BoundaryException("image", MaximumWidth + "x" + MaximumHeight);
 			byte[] mask = null;
 			if (image.PixelFormat == PixelFormat.Format32bppArgb && type == ImageType.Transparent)
 				image = GraphicsFunctions.ConvertTo8bpp(image, colors);
@@ -431,14 +426,6 @@ namespace Idmr.ImageFormat.Dat
 		#endregion public methods
 
 		#region public properties
-		/// <summary>Maximum allowable image width</summary>
-		/// <remarks>Value is <b>640</b></remarks>
-		public const short MaximumWidth = 640;
-
-		/// <summary>Maximum allowable image height</summary>
-		/// <remarks>Value is <b>480</b></remarks>
-		public const short MaximumHeight = 480;
-
 		/// <summary>Gets or sets the format of the raw byte data</summary>
 		/// <remarks>Transparency data is lost when going to <see cref="ImageType.Transparent"/>.<br/>
 		/// If <see cref="Image"/> is defined, is converted to the new <see cref="ImageType"/></remarks>

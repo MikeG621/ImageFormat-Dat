@@ -1,8 +1,8 @@
 DAT Image File
-Author: Jagged Fel (jaggedfel621@gmail.com)
-Site: http://idmr.empirereborn.net
+Author: Michael Gaisser (mjgaisser@gmail.com)
+Site: https://github.com/MikeG621
 Released: 2010.02.14
-Updated: 2011.10.22
+Updated: 2019.07.26
 =====
 
 The .DAT file used in X-wing Alliance is an archive file that can contain
@@ -275,6 +275,6 @@ channel you'll see that the Subs are actually stacked on top of each other,
 they used the Alpha channel to remove old pixels instead of leaving them blank.
 
 Type 25 (0x19); Full ARGB. No compression, this type is encoded the same as
-Type 24, however when using the appropriate hook to modify the game, it will
-display the image with its true 8-bit Alpha instead of the down-converted
-value when used as a backdrop.
+Type 24, however when using the appropriate hook to modify the game and unlock
+the 32bpp processor, it will display the image with its true 8-bit Alpha
+instead of the down-converted value when used as a backdrop.
