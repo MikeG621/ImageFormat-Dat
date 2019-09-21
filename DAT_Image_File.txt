@@ -2,7 +2,7 @@ DAT Image File
 Author: Michael Gaisser (mjgaisser@gmail.com)
 Site: https://github.com/MikeG621
 Released: 2010.02.14
-Updated: 2019.07.26
+Updated: 2019.09.21
 =====
 
 The .DAT file used in X-wing Alliance is an archive file that can contain
@@ -108,7 +108,7 @@ struct Row
 	#if (Type==7 || Type==23)
 	BYTE	NumberOfOperations
 	OpCode[NumberOfOperations]
-	#elseif (Type==24)
+	#elseif (Type==24 || Type==25)
 	Pixel[Width]
 	#endif
 }
@@ -131,8 +131,14 @@ struct Pixel
 	#if (Type==23)
 	BYTE	Alpha
 	#endif
+	#if (Type==25)
+	BYTE	Blue
+	BYTE	Green
+	BYTE	Red
+	#else
 	BYTE	ColorIndex
-	#if (Type==24)
+	#endif
+	#if (Type==24 || Type==25)
 	BYTE	Alpha
 	#endif
 }
@@ -141,7 +147,7 @@ struct Pixel
 DAT Structure Details
 
 Yet another image format for the X-wing series, although this one is XWA only.
-Three different raw formats are bundled under this one type, the difference is
+Four different raw formats are bundled under this one type, the difference is
 the type of bitmaps that are displayed. More on that in a sec.
 
 As mentioned at the beginning, the images are categorized as Groups and Subs.
@@ -184,7 +190,7 @@ values. The first Group will always have a value of zero. Using these values
 alone a jump table can be constructed to the separate groups. This is similar
 to the FrameOffset value in ACT files.
 GroupHeader[0].DataOffset = 0
-GroupHeader[i].DataOffset = GroupHeader[i-1].DataOffset + GroupHeader[i-1].Length
+GroupHeader[i].DataOffset = GroupHeader[i-1].DataOffset+GroupHeader[i-1].Length
 
 -- Group and Sub --
 
@@ -224,8 +230,10 @@ it tends to be the second index as well.
 -- Rows --
 
 Okay, here's where most of the magic happens. The only common similarity
-between the three Types are the length of the Rows array itself, and that they
-are all indexed color images.
+between the first three Types are the length of the Rows array itself, and that
+they are all indexed color images. Once we get to Type 25 (which again requires
+a hook to be installed) then there's little to no processing that needs to be
+done and the size of Row doubles.
 
 First off, Type 7; Transparent. Mostly used as the backdrop type, it also
 has the tightest compression rate for filesize. The Row starts off with the
@@ -274,7 +282,17 @@ end-of-image marker. Back to Craft_Icons.dat again, if you remove the Alpha
 channel you'll see that the Subs are actually stacked on top of each other,
 they used the Alpha channel to remove old pixels instead of leaving them blank.
 
-Type 25 (0x19); Full ARGB. No compression, this type is encoded the same as
-Type 24, however when using the appropriate hook to modify the game and unlock
-the 32bpp processor, it will display the image with its true 8-bit Alpha
-instead of the down-converted value when used as a backdrop.
+Important note for in-flight images such as backdrops: the original flight
+engine simplifies the constructed 8888 32bpp image in the DAT to a 1555 16bpp
+image, so a backdrop won't have nice feathered edges. It can be patched to
+treat them as 4444 16bpp, which gives 16 levels of alpha blending at the cost
+of color detail. For best results, we can use the next type...
+
+Type 25 (0x19); Full ARGB, requires 32-bit hook. This type due to its nature is
+a little bit different in how it's handled throughout the image. First off,
+since it's full ARGB there's no indexed color, so FileHeader.NumberOfColors is
+zero (which of course means all Group.NumberOfColors values are zero) and
+Sub.ImageHeaderOffset is 0x2C since there's no Color array to skip over.
+
+For the image data itself, it's simple raw pixel data at this point, four bytes
+in the BGRA order with no extra termination data, they go from one to the next.
