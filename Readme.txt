@@ -2,13 +2,22 @@ Idmr.ImageFormat.Dat.dll
 ========================
 
 Author: Michael Gaisser (mjgaisser@gmail.com)
-Version: 2.1
-Date: 2012.12.14
+Version: 2.2
+Date: 2019.09.22
 
 Library for reading LucasArts *.DAT backdrop files
 
 ==========
 Version History
+
+v2.2 - 22 Sep 2019
+ - Added Format 25 capability
+ - Removed size limits from images. Masks still need to match the image size.
+ - (DatFile) Added UsedHeight and UsedWidth properties
+ - (GroupCollection, SubCollection) Increased ItemLimit to 256
+ - (GroupCollection, SubCollection) Included an early return to Add if _add fails
+ - (GroupCollection, SubCollection) Added more quantity checks to better enforce ItemLimit
+ - Tweaked comments throughout
 
 v2.1 - 14 Dec 2014
  - Changed license to MPL

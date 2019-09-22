@@ -4,10 +4,11 @@
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1+
+ * VERSION: 2.2
  */
 
 /* CHANGE LOG
+ * v2.2, 190922
  * [DEL] max image size checks
  * v2.1, 141214
  * [UPD] switch to MPL
@@ -32,7 +33,7 @@ namespace Idmr.ImageFormat.Dat
 
 		#region constructors
 		/// <summary>Creates a new Group according to the supplied header information</summary>
-		/// <param name="header">GroupHeader raw data, must have a length of 24</param>
+		/// <param name="header">GroupHeader raw data, must have a length of <b>24</b></param>
 		/// <exception cref="ArgumentException"><paramref name="header"/> is not the required length</exception>
 		public Group(byte[] header)
 		{
@@ -64,6 +65,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="groupID">Group ID value</param>
 		/// <param name="images">Images from which to create the Subs</param>
 		/// <exception cref="ArgumentException">Not all <paramref name="images"/> are 8bppIndexed</exception>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="images"/> has more than than 256 elements.</exception>
 		/// <remarks><see cref="Sub.SubID"/> starts at <b>0</b> and increments by 1. All <paramref name="images"/> must be 8bppIndexed and are initialized as <see cref="Sub.ImageType.Transparent"/><br/>
 		/// To use Blended images, <see cref="Subs"/> must individually have their <see cref="Sub.Type"/> changed and use <see cref="Sub.SetTransparencyMask"/></remarks>
 		public Group(short groupID, Bitmap[] images)

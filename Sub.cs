@@ -1,13 +1,14 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2014 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the GPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1+
+ * VERSION: 2.2
  */
 
 /* CHANGE LOG
+ * v2.2, 190922
  * [NEW] Format 25, 32bpp ARGB
  * [DEL] max image limits
  * v2.1, 141214
@@ -32,7 +33,7 @@ namespace Idmr.ImageFormat.Dat
 	{
 		short _groupID;
 		short _subID;
-		Color[] _colors;
+		Color[] _colors = null;
 		Bitmap _image;	// if (Type.Transparent) Format8bppIndexed, else Format32bppArgb
 		ImageType _type;
 		/// <summary>SubHeader + ImageHeader</summary>
@@ -53,7 +54,7 @@ namespace Idmr.ImageFormat.Dat
 			/// <summary>16bpp Indexed Alpha uncompressed</summary>
 			UncompressedBlended,
 			/// <summary>32bpp ARGB</summary>
-			Full32bppARGB
+			Full32bppArgb
 		};
 
 		#region constructors
@@ -78,11 +79,13 @@ namespace Idmr.ImageFormat.Dat
 			int imageDataOffset = BitConverter.ToInt32(_headers, offset + 8);
 			if (BitConverter.ToInt32(_headers, offset + 0x24) != _imageHeaderReserved)
 				throw new ArgumentException(DatFile._valEx, "raw"); // Reserved
-			_colors = new Color[BitConverter.ToInt32(_headers, offset + 0x28)];	// NumberOfColors
+			if (BitConverter.ToInt32(_headers, offset + 0x28) != 0)
+				_colors = new Color[BitConverter.ToInt32(_headers, offset + 0x28)]; // NumberOfColors
 			offset += _imageHeaderLength;
 			// Sub.Colors[]
-			for (int k = 0; k < _colors.Length; k++, offset += 3)
-				_colors[k] = Color.FromArgb(raw[offset], raw[offset + 1], raw[offset + 2]);
+			if (_colors != null)
+				for (int k = 0; k < _colors.Length; k++, offset += 3)
+					_colors[k] = Color.FromArgb(raw[offset], raw[offset + 1], raw[offset + 2]);
 			// Sub.Rows[]
 			_rows = new byte[length - imageDataOffset];
 			ArrayFunctions.TrimArray(raw, offset, _rows);
@@ -93,7 +96,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="subID">Sub ID value</param>
 		/// <param name="image">The image to be used</param>
 		/// <exception cref="ArgumentException"><paramref name="image"/> is not <see cref="PixelFormat.Format8bppIndexed"/></exception>
-		/// <remarks><paramref name="image"/> must be <see cref="PixelFormat.Format8bppIndexed"/> with <b>640x480</b> maximum dimensions. Initialized as <see cref="ImageType.Transparent"/>.<br/>
+		/// <remarks><paramref name="image"/> must be <see cref="PixelFormat.Format8bppIndexed"/>. Initialized as <see cref="ImageType.Transparent"/>.<br/>
 		/// If a Blended type is desired, change <see cref="Type"/> and use <see cref="SetTransparencyMask"/></remarks>
 		public Sub(short groupID, short subID, Bitmap image)
 		{
@@ -122,7 +125,6 @@ namespace Idmr.ImageFormat.Dat
 			ArrayFunctions.WriteToArray(_subID, _headers, 0xC);
 			ArrayFunctions.WriteToArray(_imageHeaderLength, _headers, _subHeaderLength + 4);
 			ArrayFunctions.WriteToArray(_imageHeaderReserved, _headers, _subHeaderLength + 0x24);
-			_colors = null;
 			_image = null;
 			_type = ImageType.Transparent;
 			_rows = null;
@@ -135,9 +137,10 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="width">Image width</param>
 		/// <param name="height">Image height</param>
 		/// <param name="colors">Defined Color array to be used for the image</param>
-		/// <param name="type">Encoding protocol used for <i>rawData</i></param>
+		/// <param name="type">Encoding protocol used for <paramref name="rawData"/></param>
 		/// <returns>If <paramref name="type"/> is <see cref="ImageType.Transparent"/>, returns a <see cref="PixelFormat.Format8bppIndexed"/> image.<br/>
-		/// Otherwise the returned image will be <see cref="PixelFormat.Format32bppArgb"/></returns>
+		/// Otherwise the returned image will be <see cref="PixelFormat.Format32bppArgb"/>.
+		/// <paramref name="colors"/> is ignored and allowed to be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>.</returns>
 		public static Bitmap DecodeImage(byte[] rawData, int width, int height, Color[] colors, ImageType type)
 		{
 			int offset = 0;
@@ -202,7 +205,6 @@ namespace Idmr.ImageFormat.Dat
 					image.UnlockBits(bdB);
 					break;
 				case ImageType.UncompressedBlended:
-				case ImageType.Full32bppARGB:
 					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
 					BitmapData bdU = GraphicsFunctions.GetBitmapData(image);
 					byte[] pixelUncomp = new byte[bdU.Stride * bdU.Height];
@@ -221,6 +223,13 @@ namespace Idmr.ImageFormat.Dat
 					GraphicsFunctions.CopyBytesToImage(pixelUncomp, bdU);
 					image.UnlockBits(bdU);
 					break;
+				case ImageType.Full32bppArgb:
+					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+					BitmapData bdArgb = GraphicsFunctions.GetBitmapData(image);
+					// Don't need to process the rows, it's already raw data
+					GraphicsFunctions.CopyBytesToImage(rawData, bdArgb);
+					image.UnlockBits(bdArgb);
+					break;
 			}
 			return image;
 		}
@@ -229,13 +238,27 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="image">The image to encode</param>
 		/// <param name="type">The encoding protocol to use</param>
 		/// <param name="colors">The color array to use</param>
-		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed</param>
-		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed</param>
-		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters</remarks>
+		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed, or simply the original <paramref name="image"/> as <see cref="PixelFormat.Format32bppArgb"/> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>.</param>
+		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed, or <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>.</param>
+		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters. <paramref name="colors"/> is ignored and can be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>.</remarks>
 		/// <returns>Encoded byte data of <paramref name="trimmedImage"/></returns>
+		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is null and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/>.</exception>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
+			if (type == ImageType.Full32bppArgb)
+			{
+				trimmedImage = new Bitmap(image);	// convert to 32bppArgb
+				BitmapData bdArgb = GraphicsFunctions.GetBitmapData(trimmedImage);
+				byte[] pixelsArgb = new byte[bdArgb.Stride * bdArgb.Height];
+				GraphicsFunctions.CopyImageToBytes(bdArgb, pixelsArgb);
+				trimmedImage.UnlockBits(bdArgb);
+				trimmedColors = null;
+				return pixelsArgb;
+			}
+
 			byte[] mask = null;
+			if (colors == null)
+				throw new ArgumentNullException("colors", "Colors is required for all types except Full32bppArgb");
 			if (image.PixelFormat == PixelFormat.Format32bppArgb && type == ImageType.Transparent)
 				image = GraphicsFunctions.ConvertTo8bpp(image, colors);
 			else if (image.PixelFormat == PixelFormat.Format32bppArgb) // converting from one Blended to another
@@ -350,7 +373,6 @@ namespace Idmr.ImageFormat.Dat
 					}
 					break;
 				case ImageType.UncompressedBlended:
-				case ImageType.Full32bppARGB:
 					for (int y = 0; y < bd.Height; y++)
 					{
 						for (int x = 0, pos = bd.Stride * y; x < bd.Width; x++)
@@ -361,7 +383,7 @@ namespace Idmr.ImageFormat.Dat
 					}
 					break;
 			}
-			if (type != ImageType.UncompressedBlended && type != ImageType.Full32bppARGB) offset++;	// EndSub
+			if (type != ImageType.UncompressedBlended) offset++;	// EndSub
 			GraphicsFunctions.CopyBytesToImage(pixels, bd);	// because we messed with colors indexes
 			image.UnlockBits(bd);
 			if (type != ImageType.Transparent)
@@ -377,8 +399,7 @@ namespace Idmr.ImageFormat.Dat
 
 		/// <summary>Sets the image of the Sub</summary>
 		/// <param name="image">The image to be used</param>
-		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions</exception>
-		/// <remarks><paramref name="image"/> restricted to 640x480, unused color indexes will be removed.<br/>
+		/// <remarks>Unused color indexes will be removed.<br/>
 		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
 		/// If <paramref name="image"/> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
 		public void SetImage(Bitmap image)
@@ -392,8 +413,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="image">The image to be used</param>
 		/// <param name="mask">The transparency mask to be used. Ignored if <see cref="Type"/> is <see cref="ImageType.Transparent"/></param>
 		/// <exception cref="ArgumentException">Invalid <paramref name="mask"/> PixelFormat</exception>
-		/// <exception cref="BoundaryException"><paramref name="image"/> exceeds allowable dimensions<br/><b>-or-</b><br/><paramref name="mask"/> is not the required size</exception>
-		/// <remarks><paramref name="image"/>.Size restricted to <b>640x480</b>, unused color indexes will be removed.<br/>
+		/// <exception cref="BoundaryException"><paramref name="mask"/> is not the required size</exception>
+		/// <remarks>Unused color indexes will be removed.<br/>
 		/// <paramref name="mask"/>.Size must match <paramref name="image"/>.Size, must be <see cref="PixelFormat.Format8bppIndexed"/>. Pixel indexes are <b>0</b> for transparent to <b>255</b> for solid.<br/>
 		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
 		/// If <paramref name="image"/> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
@@ -429,12 +450,15 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Gets or sets the format of the raw byte data</summary>
 		/// <remarks>Transparency data is lost when going to <see cref="ImageType.Transparent"/>.<br/>
 		/// If <see cref="Image"/> is defined, is converted to the new <see cref="ImageType"/></remarks>
+		/// <exception cref="InvalidOperationException">Attempted to set an indexed format and <see cref="Colors"/> is <b>null</b>.</exception>
 		public ImageType Type
 		{
 			get { return _type; }
 			set
 			{
-				if (_image != null) _rows = EncodeImage(_image, value, (Color[])_colors.Clone(), out _image, out _colors);
+				if (value != ImageType.Full32bppArgb && _colors == null)
+					throw new InvalidOperationException("Cannot change to indexed format prior to assigning color palette.");
+				if (_image != null) _rows = EncodeImage(_image, value, (_colors != null ? (Color[])_colors.Clone() : null), out _image, out _colors);
 				_type = value;
 				_headerUpdate();
 			}
@@ -476,29 +500,42 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Gets or sets the defined colors</summary>
 		/// <remarks><i>value</i> is limited to <b>256</b> colors.<br/>
 		/// If <see cref="Image"/> is defined, is updated with the new colors.</remarks>
+		/// <exception cref="ArgumentNullException"><i>value</i> is <b>null</b> and <see cref="Type"/> is an Indexed variety.</exception>
 		/// <exception cref="ArgumentOutOfRangeException"><i>value</i> exceeds 256 colors</exception>
 		public Color[] Colors
 		{
 			get { return _colors; }
 			set
 			{
-				if (value.Length > 256) throw new ArgumentOutOfRangeException("256 colors max");
-				if (_image != null)
-					if (_image.PixelFormat == PixelFormat.Format8bppIndexed)
+				if (value == null && _type != ImageType.Full32bppArgb) throw new ArgumentNullException("Colors", "Colors cannot be null for indexed image types");
+				if (value != null)
+				{
+					if (value.Length > 256) throw new ArgumentOutOfRangeException("Colors", "256 colors max");
+					if (_image != null)
 					{
-						ColorPalette pal = _image.Palette;
-						for (int i = 0; i < value.Length; i++) pal.Entries[i] = value[i];
-						_image.Palette = pal;
+						if (_image.PixelFormat == PixelFormat.Format8bppIndexed)
+						{
+							ColorPalette pal = _image.Palette;
+							for (int i = 0; i < value.Length; i++) pal.Entries[i] = value[i];
+							_image.Palette = pal;
+						}
+						else if (_type != ImageType.Full32bppArgb)
+						{
+							byte[] maskData = _getMaskData(_image);
+							Bitmap temp8bpp = GraphicsFunctions.ConvertTo8bpp(_image, _colors); //force back to 8bpp
+							ColorPalette pal = temp8bpp.Palette;
+							for (int i = 0; i < value.Length; i++) pal.Entries[i] = value[i];
+							temp8bpp.Palette = pal; // apply new colors
+							_image = _applyMaskData(temp8bpp, maskData);
+						}
+						else
+						{
+							// existing image is Full32bppARGB
+							// chances are, if it's ARGB and the user is assigning colors it's the first step towards getting it ready to down-convert
+							// for that reason, I don't think there's anything we need to do here. Set the pallet, change types later
+						}
 					}
-					else
-					{
-						byte[] maskData = _getMaskData(_image);
-						Bitmap temp8bpp = GraphicsFunctions.ConvertTo8bpp(_image, _colors);	//force back to 8bpp
-						ColorPalette pal = temp8bpp.Palette;
-						for (int i = 0; i < value.Length; i++) pal.Entries[i] = value[i];
-						temp8bpp.Palette = pal;	// apply new colors
-						_image = _applyMaskData(temp8bpp, maskData);
-					}
+				}
 				_colors = value;
 				_headerUpdate();
 			}
@@ -535,7 +572,10 @@ namespace Idmr.ImageFormat.Dat
 			ArrayFunctions.WriteToArray(type, _headers, _subHeaderLength + 0x20);
 			// short 0
 			// imageHeaderReserved
-			ArrayFunctions.WriteToArray(_colors.Length, _headers, _subHeaderLength + 0x28);
+			if (_colors != null)
+				ArrayFunctions.WriteToArray(_colors.Length, _headers, _subHeaderLength + 0x28);
+			else
+				ArrayFunctions.WriteToArray(0, _headers, _subHeaderLength + 0x28);
 		}
 
 		static Bitmap _applyMaskData(Bitmap image, byte[] maskData)

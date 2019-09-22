@@ -13,10 +13,12 @@
  * If a copy of the MPL (MPL.txt) was not distributed with this file,
  * you can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * VERSION: 2.1+
+ * VERSION: 2.2
  */
 
 /* CHANGE LOG
+ * v2.2, 190922
+ * [UPD] tweaked some comments
  * [NEW] UsedHeight, UsedWidth
  * v2.1, 141214
  * [UPD] switch to MPL
@@ -70,7 +72,7 @@ namespace Idmr.ImageFormat.Dat
 
 		#region public methods
 		/// <summary>Save the Dat archive in its existing location</summary>
-		/// <exception cref="Idmr.Common.SaveFileException">File cannot be saved</exception>
+		/// <exception cref="SaveFileException">File cannot be saved</exception>
 		/// <remarks>Original remains unchanged on failure</remarks>
 		public void Save()
 		{
@@ -125,20 +127,20 @@ namespace Idmr.ImageFormat.Dat
 				throw new SaveFileException(x);
 			}
 		}
-		
+
 		/// <summary>Save the Dat archive in a new location</summary>
 		/// <param name="file">Full path to the new location</param>
-		/// <exception cref="Idmr.Common.SaveFileException">File cannot be saved</exception>
+		/// <exception cref="SaveFileException">File cannot be saved</exception>
 		/// <remarks>Original remains unchanged on failure</remarks>
 		public void Save(string file)
 		{
 			_filePath = file;
 			Save();
 		}
-		
+
 		/// <summary>Populates the Dat with the raw byte data from file</summary>
 		/// <param name="rawData">Entire contents of a *.DAT archive</param>
-		/// <exception cref="System.ArgumentException">Validation error</exception>
+		/// <exception cref="ArgumentException">Validation error</exception>
 		public void DecodeFile(byte[] rawData)
 		{
 			// Dat.FileHeader
@@ -236,6 +238,6 @@ namespace Idmr.ImageFormat.Dat
 			}
 		}
 		
-		int _dataOffset { get { return (int)(NumberOfGroups * Group._headerLength); } }
+		int _dataOffset { get { return NumberOfGroups * Group._headerLength; } }
 	}
 }

@@ -4,10 +4,13 @@
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1+
+ * VERSION: 2.2
  */
 
 /* CHANGE LOG
+ * v2.2, 190922
+ * [UPD] added a quantity check to ctor
+ * [UPD] tweaked comments
  * [UPD] ItemLimit increased to 256
  * [UPD] added early return in Add if _add fails
  * v2.1, 141214
@@ -42,7 +45,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 		/// <summary>Creates a Collection with multiple initial <see cref="Group">Groups</see></summary>
 		/// <param name="quantity">Number of <see cref="Group">Groups</see> to start with</param>
-		/// <exception cref="System.ArgumentOutOfRangeException"><i>quantity</i> is non-positive and less than <see cref="ResizableCollection{T}.ItemLimit"/></exception>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="quantity"/> is non-positive and less than <see cref="ResizableCollection{T}.ItemLimit"/></exception>
 		/// <remarks>Individual <see cref="Group">Groups</see> initialized with stand-in <see cref="Group.ID"/> values ascending from <b>-2000</b> and incrementing by <b>100</b></remarks>
 		public GroupCollection(int quantity)
 		{
@@ -54,27 +57,29 @@ namespace Idmr.ImageFormat.Dat
 		}
 		/// <summary>Creates a Collection and populates it with the provided <see cref="Group">Groups</see></summary>
 		/// <param name="groups">Initial <see cref="Group">Groups</see></param>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="groups"/> has more than 256 elements.</exception>
 		public GroupCollection(Group[] groups)
 		{
+			_itemLimit = 256;
+			if (groups.Length > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Group quantity must be less than " + _itemLimit);
 			_items = new List<Group>(groups.Length);
 			for (int i = 0; i < groups.Length; i++) Add(groups[i]);
-			_itemLimit = 256;
 		}
 		#endregion constructors
 		
 		#region public methods
 		/// <summary>Adds an empty Group with the given ID</summary>
 		/// <param name="groupID">ID value for the new Group</param>
-		/// <exception cref="System.ArgumentException"><i>groupID</i> is already in use</exception>
+		/// <exception cref="ArgumentException"><i>groupID</i> is already in use</exception>
 		/// <returns>Index of the Group within the Collection</returns>
 		/// <remarks>If <see cref="AutoSort"/> is <b>true</b>, Group is added and then the Collection is sorted by ascending <see cref="Group.ID"/></remarks>
 		public int Add(short groupID) { return Add(new Group(groupID)); }
 		/// <summary>Adds a Group with the given ID and Subs created from <i>images</i></summary>
 		/// <param name="groupID">ID value for the new Group</param>
 		/// <param name="images">Images from which to create the Subs</param>
-		/// <exception cref="System.ArgumentException"><i>groupID</i> is already in use<br/><b>-or-</b><br/><i>images</i> are not all 8bppIndexed</exception>
+		/// <exception cref="ArgumentException"><i>groupID</i> is already in use<br/><b>-or-</b><br/><i>images</i> are not all 8bppIndexed</exception>
 		/// <returns>Index of the Group within the Collection</returns>
-		/// <remarks>If <see cref="AutoSort"/> is <b>true</b>, Group is added and then the Collection is sorted by ascending <see cref="Group.ID"/>. <i>images</i> must all be 8bppIndexed and are initialized as <b>ImageType.Transparent</b>.<br/>
+		/// <remarks>If <see cref="AutoSort"/> is <b>true</b>, Group is added and then the Collection is sorted by ascending <see cref="Group.ID"/>. <paramref name="images"/> must all be 8bppIndexed and are initialized as <b>ImageType.Transparent</b>.<br/>
 		/// To use Blended images, <see cref="Sub">Subs</see> must individually have their <see cref="Sub.Type"/> changed and use <see cref="Sub.SetTransparencyMask"/></remarks>
 		public int Add(short groupID, System.Drawing.Bitmap[] images)
 		{
@@ -84,7 +89,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 		/// <summary>Adds a Group populated with the given Collection of Subs</summary>
 		/// <param name="subs">Subs to be included in the Group</param>
-		/// <exception cref="System.ArgumentException"><see cref="SubCollection.GroupID"/> is already in use</exception>
+		/// <exception cref="ArgumentException"><see cref="SubCollection.GroupID"/> is already in use</exception>
 		/// <returns>Index of the Group within the Collection</returns>
 		/// <remarks>If <see cref="AutoSort"/> is <b>true</b>, Group is added and then the Collection is sorted by ascending ID</remarks>
 		public int Add(SubCollection subs) { return Add(new Group(subs)); }
@@ -105,23 +110,23 @@ namespace Idmr.ImageFormat.Dat
 
 		/// <summary>Deletes the specified Group from the Collection</summary>
 		/// <param name="index">Group index</param>
-		/// <returns><b>true</b> if successful, <b>false</b> for invalid <i>index</i> value</returns>
+		/// <returns><b>true</b> if successful, <b>false</b> for invalid <paramref name="index"/> value</returns>
 		public bool Remove(int index)
 		{
 			bool success = (_removeAt(index) != -1);
 			if (success) _isModified = true;
 			return success;
 		}
-		
+
 		/// <summary>Deletes the Group with the specified ID</summary>
 		/// <param name="groupID">The ID of the Group to be deleted</param>
-		/// <returns><b>true</b> if successfull, <b>false</b> for invalid <i>groupID</i> value</returns>
+		/// <returns><b>true</b> if successfull, <b>false</b> for invalid <paramref name="groupID"/> value</returns>
 		public bool RemoveByID(short groupID) { return Remove(GetIndex(groupID)); }
-		
+
 		/// <summary>Updates the <see cref="Group.ID"/></summary>
 		/// <param name="groupID">The ID of the Group to modify</param>
 		/// <param name="newID">The new ID</param>
-		/// <exception cref="System.ArgumentException"><i>newID</i> is already in use<br/><b>-or-</b><br/><i>groupID</i> does not exist</exception>
+		/// <exception cref="ArgumentException"><paramref name="newID"/> is already in use<br/><b>-or-</b><br/><paramref name="groupID"/> does not exist</exception>
 		/// <returns>Index of the updated Group within the Collection</returns>
 		/// <remarks><see cref="Group.ID"/> is updated and then if <see cref="AutoSort"/> is <b>true</b> the Collection is sorted by ascending ID.<br/>
 		/// This is the preferred method of updating Group IDs</remarks>
@@ -135,10 +140,10 @@ namespace Idmr.ImageFormat.Dat
 			if (!_isLoading) _isModified = true;
 			return GetIndex(newID);
 		}
-		
+
 		/// <summary>Gets the Collection index of the Group with the provided ID</summary>
 		/// <param name="groupID">Group ID value</param>
-		/// <returns>Collection index if <i>groupID</i> exists, otherwise <b>-1</b></returns>
+		/// <returns>Collection index if <paramref name="groupID"/> exists, otherwise <b>-1</b></returns>
 		public int GetIndex(short groupID)
 		{
 			int index;
@@ -164,8 +169,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Expands or contracts the Collection, populating as necessary</summary>
 		/// <param name="value">The new size of the Collection. Must not be negative.</param>
 		/// <param name="allowTruncate">Controls if the Collection is allowed to get smaller</param>
-		/// <exception cref="InvalidOperationException"><i>value</i> is smaller than <see cref="FixedSizeCollection{T}.Count"/> and <i>allowTruncate</i> is <b>false</b>.</exception>
-		/// <exception cref="ArgumentOutOfRangeException"><i>value</i> must be greater than 0.</exception>
+		/// <exception cref="InvalidOperationException"><paramref name="value"/> is smaller than <see cref="FixedSizeCollection{T}.Count"/> and <paramref name="allowTruncate"/> is <b>false</b>.</exception>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> is less than 0.</exception>
 		/// <remarks>If the Collection expands, the new items will be a blank <see cref="Group"/> with incremental <see cref="Group.ID"/> values start from <b>-3000</b>. When truncating, items will be removed starting from the last index.</remarks>
 		public override void SetCount(int value, bool allowTruncate)
 		{

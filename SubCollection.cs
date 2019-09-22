@@ -4,10 +4,13 @@
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.1+
+ * VERSION: 2.2
  */
 
 /* CHANGE LOG
+ * v2.2, 190922
+ * [UPD] tweaked some of the comments
+ * [UPD] added some quantity checks
  * [UPD] ItemLimit increased to 256
  * [UPD] added early return in Add if _add fails
  * v2.1, 141214
@@ -29,7 +32,7 @@ using Idmr.Common;
 namespace Idmr.ImageFormat.Dat
 {
 	/// <summary>Object to maintain Dat archive <see cref="Sub">Subs</see></summary>
-	/// <remarks><see cref="Idmr.Common.ResizableCollection{T}.ItemLimit"/> is set to <b>200</b></remarks>
+	/// <remarks><see cref="ResizableCollection{T}.ItemLimit"/> is set to <b>256</b></remarks>
 	public class SubCollection : ResizableCollection<Sub>
 	{
 		short _groupID = 0;
@@ -48,14 +51,14 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Creates a Collection with multiple initial <see cref="Sub">Subs</see></summary>
 		/// <param name="quantity">Number of Subs to start with</param>
 		/// <param name="groupID">ID value of the parent <see cref="Group"/></param>
-		/// <exception cref="System.ArgumentOutOfRangeException"><i>quantity</i> is not positive and less than <see cref="ResizableCollection{T}.ItemLimit"/></exception>
-		/// <remarks>Individual Subs are created with <i>groupID</i> and <see cref="Sub.SubID">SubIDs</see> starting from <b>0</b>.<br/>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="quantity"/> is not positive or greater than <see cref="ResizableCollection{T}.ItemLimit"/></exception>
+		/// <remarks>Individual Subs are created with <paramref name="groupID"/> and <see cref="Sub.SubID">SubIDs</see> starting from <b>0</b>.<br/>
 		/// Sub colors and images remain uninitialized.<br/>
 		/// <see cref="AutoSort"/> is set to <b>true</b></remarks>
 		public SubCollection(int quantity, short groupID)
 		{
 			_itemLimit = 256;
-			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Sub quantity must be positive and less than " + _itemLimit);
+			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Sub quantity must be positive and less than or equal to" + _itemLimit);
 			_items = new List<Sub>(_itemLimit);
 			_groupID = groupID;
 			for (short i = 0; i < quantity; i++) Add(new Sub(_groupID, i));
@@ -63,10 +66,13 @@ namespace Idmr.ImageFormat.Dat
 		}
 		/// <summary>Creates a Collection and populates it with the provided Subs</summary>
 		/// <param name="subs">Initial Subs</param>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="subs"/> has more than than 256 elements.</exception>
 		/// <remarks><see cref="Sub.GroupID"/> is defined by first Sub in the array</remarks>
 		public SubCollection(Sub[] subs)
 		{
 			_itemLimit = 256;
+			if (subs.Length > _itemLimit)
+				throw new ArgumentOutOfRangeException("DAT.Sub quantity must be less than or equal to" + _itemLimit);
 			_items = new List<Sub>(_itemLimit);
 			for (int i = 0; i < subs.Length; i++) Add(subs[i]);
 			GroupID = subs[0].GroupID;
@@ -74,36 +80,38 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Creates a Collection and populates it with Subs created from the provided images</summary>
 		/// <param name="groupID">ID value of the parent <see cref="Group"/></param>
 		/// <param name="images">Images from which to create the Subs</param>
-		/// <remarks><i>images</i> must all be <see cref="System.Drawing.Imaging.PixelFormat.Format8bppIndexed"/> with <b>640x480</b> maximum dimensions. Initialized as <see cref="Sub.ImageType.Transparent"/>. If a Blended type is desired, change <see cref="Sub.Type"/> and use <see cref="Sub.SetTransparencyMask"/>.<br/>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="images"/> has more than than 256 elements.</exception>
+		/// <remarks><paramref name="images"/> must all be <see cref="System.Drawing.Imaging.PixelFormat.Format8bppIndexed"/>. Initialized as <see cref="Sub.ImageType.Transparent"/>. If a Blended type is desired, change <see cref="Sub.Type"/> and use <see cref="Sub.SetTransparencyMask"/>.<br/>
 		/// <see cref="AutoSort"/> is set to <b>true</b>.</remarks>
 		public SubCollection(short groupID, System.Drawing.Bitmap[] images)
 		{
 			_itemLimit = 256;
+			if (images.Length > _itemLimit)
+				throw new ArgumentOutOfRangeException("DAT.Sub quantity must be less than or equal to" + _itemLimit);
 			_items = new List<Sub>(_itemLimit);
 			_groupID = groupID;
 			for(short i = 0; i < images.Length; i++) Add(new Sub(groupID, i, images[i]));
 			AutoSort = true;
 		}
 		#endregion constructors
-		
+
 		#region public methods
 		/// <summary>Adds an empty Sub</summary>
 		/// <param name="subID">ID value for the new Sub</param>
-		/// <exception cref="System.ArgumentException"><i>subID</i> is already in use</exception>
+		/// <exception cref="ArgumentException"><paramref name="subID"/>is already in use</exception>
 		/// <returns>Index of the Sub within the Collection</returns>
 		/// <remarks>Sub is added and then if <see cref="AutoSort"/> is <b>true</b> the Collection is sorted by ascending <see cref="Sub.SubID"/></remarks>
 		public int Add(short subID) { return Add(new Sub(_groupID, subID)); }
 		/// <summary>Adds a new Sub with the provided image</summary>
 		/// <param name="subID">ID value for the new Sub</param>
 		/// <param name="image">Image to be used, must be <see cref="System.Drawing.Imaging.PixelFormat.Format8bppIndexed"/></param>
-		/// <exception cref="System.ArgumentException"><i>image</i> is not formatted properly or <i>subID</i> is already in use</exception>
-		/// <exception cref="Idmr.Common.BoundaryException"><i>image</i> exceeds allowable dimensions</exception>
+		/// <exception cref="ArgumentException"><paramref name="image"/> is not formatted properly or <paramref name="subID"/> is already in use</exception>
 		/// <returns>Index of the Sub within the Collection</returns>
 		/// <remarks>Sub is added and then if <see cref="AutoSort"/> is <b>true</b> the Collection is sorted by ascending <see cref="Sub.SubID"/></remarks>
 		public int Add(short subID, System.Drawing.Bitmap image) { return Add(new Sub(_groupID, subID, image)); }
 		/// <summary>Adds a Sub to the Collection</summary>
 		/// <param name="sub">The Sub to be added</param>
-		/// <exception cref="System.ArgumentException"><i>subID</i> is already in use</exception>
+		/// <exception cref="ArgumentException"><paramref name="sub"/>.SubID is already in use</exception>
 		/// <returns>Index of the Sub within the Collection</returns>
 		/// <remarks>Sub is added with the Collection's <see cref="GroupID"/> and then if <see cref="AutoSort"/> is <b>true</b> the Collection is sorted by ascending <see cref="Sub.SubID"/></remarks>
 		new public int Add(Sub sub)
@@ -131,13 +139,13 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="subID">The ID of the Sub to be deleted</param>
 		/// <returns><b>true</b> if successfull, <b>false</b> for invalid <i>subID</i> value</returns>
 		public bool RemoveByID(short subID) { return Remove(GetIndex(subID)); }
-		
+
 		/// <summary>Updates the Sub.ID</summary>
 		/// <param name="subID">The <see cref="Sub.SubID"/> of the Sub to modify</param>
 		/// <param name="newID">The new ID</param>
-		/// <exception cref="System.ArgumentException"><i>newID</i> is already in use<br/><b>-or</b><br/><i>subID</i> does not exist</exception>
+		/// <exception cref="ArgumentException"><paramref name="newID"/> is already in use<br/><b>-or</b><br/><paramref name="subID"/> does not exist</exception>
 		/// <returns>Index of the updated Sub within the Collection</returns>
-		/// <remarks>SubID is updated and then if (see cref="AutoSort"/> is <b>true</b> the Collection is sorted by ascending <see cref="Sub.SubID"/><br/>
+		/// <remarks>SubID is updated and then if <see cref="AutoSort"/> is <b>true</b> the Collection is sorted by ascending <see cref="Sub.SubID"/><br/>
 		/// This is the preferred method for updating Sub IDs</remarks>
 		public int SetSubID(short subID, short newID)
 		{
@@ -149,10 +157,10 @@ namespace Idmr.ImageFormat.Dat
 			if (!_isLoading) _isModified = true;
 			return GetIndex(newID);
 		}
-		
+
 		/// <summary>Gets the Collection index of the Sub with the provided ID</summary>
 		/// <param name="subID">Sub ID value</param>
-		/// <returns>Collection index if <i>subID</i> exists, otherwise <b>-1</b></returns>
+		/// <returns>Collection index if <paramref name="subID"/> exists, otherwise <b>-1</b></returns>
 		public int GetIndex(short subID)
 		{
 			int index;
@@ -178,8 +186,8 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Expands or contracts the Collection, populating as necessary</summary>
 		/// <param name="value">The new size of the Collection. Must not be negative.</param>
 		/// <param name="allowTruncate">Controls if the Collection is allowed to get smaller</param>
-		/// <exception cref="InvalidOperationException"><i>value</i> is smaller than <see cref="FixedSizeCollection{T}.Count"/> and <i>allowTruncate</i> is <b>false</b>.</exception>
-		/// <exception cref="ArgumentOutOfRangeException"><i>value</i> must be greater than 0.</exception>
+		/// <exception cref="InvalidOperationException"><paramref name="value"/> is smaller than <see cref="FixedSizeCollection{T}.Count"/> and <paramref name="allowTruncate"/> is <b>false</b>.</exception>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> is less than 0.</exception>
 		/// <remarks>If the Collection expands, the new items will be a blank <see cref="Group"/> with incremental <see cref="Sub.SubID"/> values start from <b>0</b>, skipping over used values. When truncating, items will be removed starting from the last index.</remarks>
 		public override void SetCount(int value, bool allowTruncate)
 		{
