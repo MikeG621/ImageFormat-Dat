@@ -1,6 +1,6 @@
 /*
  * Idmr.ImageFormat.Dat, Allows editing capability of LA *.DAT Image files
- * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2021 Michael Gaisser (mjgaisser@gmail.com)
  * 
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the Mozilla Public License; either version 2.0 of the
@@ -13,10 +13,12 @@
  * If a copy of the MPL (MPL.txt) was not distributed with this file,
  * you can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * VERSION: 2.2
+ * VERSION: 2.3
  */
 
 /* CHANGE LOG
+ * v2.3, 210606
+ * [UPD] Ignores empty Groups
  * v2.2, 190922
  * [UPD] tweaked some comments
  * [NEW] UsedHeight, UsedWidth
@@ -82,7 +84,7 @@ namespace Idmr.ImageFormat.Dat
 			{
 				if (NumberOfGroups < 1) throw new InvalidDataException("No Groups defined");
 				for (int g = 0; g < NumberOfGroups; g++) if (Groups[g].ID < 0) throw new InvalidDataException("Not all Groups have been initialized");
-				_updateGroupHeaders();
+				updateGroupHeaders();
 				for (int g = 0; g < NumberOfGroups; g++)
 					for (int s = 0; s < Groups[g].NumberOfSubs; s++) Groups[g].Subs[s]._headerUpdate();
 				if (File.Exists(_filePath)) File.Copy(_filePath, tempFile);	// create backup
@@ -154,20 +156,25 @@ namespace Idmr.ImageFormat.Dat
 			for (int i = 0; i < numberOfGroups; i++)
 			{
 				ArrayFunctions.TrimArray(rawData, offset, header);
-				Groups[i] = new Group(header);
+				if (BitConverter.ToInt16(header, 2) > 0) Groups[i] = new Group(header);	// only read if there's Subs
 				offset += Group._headerLength;
 			}
 			// Dat.Groups
-			for (int i = 0; i < numberOfGroups; i++)
-			{	// Group.Subs
-				for (int j = 0; j < Groups[i].NumberOfSubs; j++)
+			for (int i = 0; i < Groups.Count;)
+			{   // Group.Subs
+				if (Groups[i].ID > 0)
 				{
-					int length = BitConverter.ToInt32(rawData, offset + 0xE);
-					byte[] sub = new byte[length + Sub._subHeaderLength];
-					ArrayFunctions.TrimArray(rawData, offset, sub);
-					Groups[i].Subs[j] = new Sub(sub);
-					offset += sub.Length;
+					for (int j = 0; j < Groups[i].NumberOfSubs; j++)
+					{
+						int length = BitConverter.ToInt32(rawData, offset + 0xE);
+						byte[] sub = new byte[length + Sub._subHeaderLength];
+						ArrayFunctions.TrimArray(rawData, offset, sub);
+						Groups[i].Subs[j] = new Sub(sub);
+						offset += sub.Length;
+					}
+					i++;
 				}
+				else Groups.Remove(i);
 			}
 		}
 		#endregion public methods
@@ -213,7 +220,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 		#endregion public properties
 
-		void _updateGroupHeaders()
+		void updateGroupHeaders()
 		{
 			for (int i = 0; i < Groups.Count; i++)
 			{

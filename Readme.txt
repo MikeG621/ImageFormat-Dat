@@ -2,13 +2,18 @@ Idmr.ImageFormat.Dat.dll
 ========================
 
 Author: Michael Gaisser (mjgaisser@gmail.com)
-Version: 2.2
-Date: 2019.09.22
+Version: 2.3
+Date: 2021.06.06
 
 Library for reading LucasArts *.DAT backdrop files
 
 ==========
 Version History
+
+v2.3 - 06 Jun 2021
+ - Empty Groups are now ignored during read
+ - (GroupCollection) Changed the increment on intial ID creation so it's always negative
+ - (SubCollection) Added more details to exception message
 
 v2.2 - 22 Sep 2019
  - Added Format 25 capability
@@ -54,7 +59,7 @@ Programmer's reference can be found in help/Idmr.ImageFormat.Dat.chm
 ==========
 Copyright Information
 
-Copyright (C) Michael Gaisser, 2009-2014
+Copyright (C) Michael Gaisser, 2009-2021
 This library file and related files are licensed under the Mozilla Public License
 v2.0 or later.  See MPL.txt for further details.
 

@@ -1,13 +1,15 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2021 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.2
+ * VERSION: 2.3
  */
 
 /* CHANGE LOG
+ * v2.3, 210606
+ * [UPD] changed the increment on intial IDs
  * v2.2, 190922
  * [UPD] added a quantity check to ctor
  * [UPD] tweaked comments
@@ -52,7 +54,7 @@ namespace Idmr.ImageFormat.Dat
 			_itemLimit = 256;
 			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Group quantity must be positive and less than " + _itemLimit);
 			_items = new List<Group>(_itemLimit);
-			for (int i = 0, id = -2000; i < quantity; i++, id += 100) Add(new Group((short)id));
+			for (int i = 0, id = -2000; i < quantity; i++, id += 1) Add(new Group((short)id));
 			AutoSort = true;
 		}
 		/// <summary>Creates a Collection and populates it with the provided <see cref="Group">Groups</see></summary>

@@ -1,13 +1,15 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2021 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.2
+ * VERSION: 2.3
  */
 
 /* CHANGE LOG
+ * v2.3, 210606
+ * [UPD] Added more details to exception message
  * v2.2, 190922
  * [UPD] tweaked some of the comments
  * [UPD] added some quantity checks
@@ -58,7 +60,7 @@ namespace Idmr.ImageFormat.Dat
 		public SubCollection(int quantity, short groupID)
 		{
 			_itemLimit = 256;
-			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Sub quantity must be positive and less than or equal to" + _itemLimit);
+			if (quantity < 1 || quantity > _itemLimit) throw new ArgumentOutOfRangeException("DAT.Sub quantity must be positive and less than or equal to " + _itemLimit + ". Group ID: " + groupID);
 			_items = new List<Sub>(_itemLimit);
 			_groupID = groupID;
 			for (short i = 0; i < quantity; i++) Add(new Sub(_groupID, i));
@@ -72,7 +74,7 @@ namespace Idmr.ImageFormat.Dat
 		{
 			_itemLimit = 256;
 			if (subs.Length > _itemLimit)
-				throw new ArgumentOutOfRangeException("DAT.Sub quantity must be less than or equal to" + _itemLimit);
+				throw new ArgumentOutOfRangeException("DAT.Sub quantity must be less than or equal to " + _itemLimit + ". Group ID: " + subs[0].GroupID);
 			_items = new List<Sub>(_itemLimit);
 			for (int i = 0; i < subs.Length; i++) Add(subs[i]);
 			GroupID = subs[0].GroupID;
@@ -87,7 +89,7 @@ namespace Idmr.ImageFormat.Dat
 		{
 			_itemLimit = 256;
 			if (images.Length > _itemLimit)
-				throw new ArgumentOutOfRangeException("DAT.Sub quantity must be less than or equal to" + _itemLimit);
+				throw new ArgumentOutOfRangeException("DAT.Sub quantity must be less than or equal to " + _itemLimit + ". Group ID: " + groupID);
 			_items = new List<Sub>(_itemLimit);
 			_groupID = groupID;
 			for(short i = 0; i < images.Length; i++) Add(new Sub(groupID, i, images[i]));

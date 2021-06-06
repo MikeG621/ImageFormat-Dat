@@ -18,4 +18,4 @@ using System.Reflection;
 [assembly: AssemblyCulture("")]
 
 // Major.Minor.Build.Revision
-[assembly: AssemblyVersion("2.2.0.*")]
+[assembly: AssemblyVersion("2.3.0.*")]
