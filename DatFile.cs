@@ -1,6 +1,6 @@
 /*
  * Idmr.ImageFormat.Dat, Allows editing capability of LA *.DAT Image files
- * Copyright (C) 2009-2021 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2022 Michael Gaisser (mjgaisser@gmail.com)
  * 
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the Mozilla Public License; either version 2.0 of the
@@ -10,13 +10,17 @@
  * library is free of defects, merchantable, fit for a particular purpose or
  * non-infringing. See the full license text for more details.
  *
- * If a copy of the MPL (MPL.txt) was not distributed with this file,
+ * If a copy of the MPL (License.txt) was not distributed with this file,
  * you can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * VERSION: 2.3
+ * VERSION: 2.4
  */
 
 /* CHANGE LOG
+ * v2.4, 220227
+ * [NEW] Format 25C capability
+ * [UPD] Forced garbage collection after load. I know that's taboo, shush.
+ * [UPD] during Save, write the raw data from EncodeImage for Full32bpp images since that's no longer
  * v2.3, 210606
  * [UPD] Ignores empty Groups
  * v2.2, 190922
@@ -62,6 +66,7 @@ namespace Idmr.ImageFormat.Dat
 				fs = File.OpenRead(file);
 				DecodeFile(new BinaryReader(fs).ReadBytes((int)fs.Length));
 				fs.Close();
+				GC.Collect();	// for files like Planet2 that are 100% Full32, this'll immediately release half the memory
 			}
 			catch (Exception x)
 			{
@@ -86,7 +91,7 @@ namespace Idmr.ImageFormat.Dat
 				for (int g = 0; g < NumberOfGroups; g++) if (Groups[g].ID < 0) throw new InvalidDataException("Not all Groups have been initialized");
 				updateGroupHeaders();
 				for (int g = 0; g < NumberOfGroups; g++)
-					for (int s = 0; s < Groups[g].NumberOfSubs; s++) Groups[g].Subs[s]._headerUpdate();
+					for (int s = 0; s < Groups[g].NumberOfSubs; s++) Groups[g].Subs[s].UpdateHeader();
 				if (File.Exists(_filePath)) File.Copy(_filePath, tempFile);	// create backup
 				File.Delete(_filePath);
 				fs = File.OpenWrite(_filePath);
@@ -96,10 +101,10 @@ namespace Idmr.ImageFormat.Dat
 				bw.Write((short)1);
 				bw.Write(NumberOfGroups);
 				bw.Write(Groups.NumberOfSubs);
-				bw.Write(_length);
+				bw.Write(length);
 				bw.Write(Groups.NumberOfColors);
 				fs.Position += 8;	// long 0
-				bw.Write(_dataOffset);
+				bw.Write(dataOffset);
 				for (int g = 0; g < NumberOfGroups; g++) bw.Write(Groups[g]._header);
 				// Groups
 				for (int g = 0; g < NumberOfGroups; g++)
@@ -114,7 +119,12 @@ namespace Idmr.ImageFormat.Dat
 							bw.Write(Groups[g].Subs[s].Colors[c].G);
 							bw.Write(Groups[g].Subs[s].Colors[c].B);
 						}
-						bw.Write(Groups[g].Subs[s]._rows);
+						if (Groups[g].Subs[s].Type == Sub.ImageType.Full32bppArgb)
+						{
+							// _rows is null to save RAM, so execute the copy to bytes again.
+							bw.Write(Sub.EncodeImage(Groups[g].Subs[s].Image, Sub.ImageType.Full32bppArgb, null, out _, out _));
+						}
+						else bw.Write(Groups[g].Subs[s]._rows);
 					}
 				}
 				fs.SetLength(fs.Position);
@@ -166,8 +176,8 @@ namespace Idmr.ImageFormat.Dat
 				{
 					for (int j = 0; j < Groups[i].NumberOfSubs; j++)
 					{
-						int length = BitConverter.ToInt32(rawData, offset + 0xE);
-						byte[] sub = new byte[length + Sub._subHeaderLength];
+						int dataLength = BitConverter.ToInt32(rawData, offset + 0xE);
+						byte[] sub = new byte[dataLength + Sub._subHeaderLength];
 						ArrayFunctions.TrimArray(rawData, offset, sub);
 						Groups[i].Subs[j] = new Sub(sub);
 						offset += sub.Length;
@@ -226,25 +236,25 @@ namespace Idmr.ImageFormat.Dat
 			{
 				// GroupID is always up-to-date
 				ArrayFunctions.WriteToArray(Groups[i].NumberOfSubs, Groups[i]._header, 2);
-				ArrayFunctions.WriteToArray(Groups[i]._length, Groups[i]._header, 4);
+				ArrayFunctions.WriteToArray(Groups[i].length, Groups[i]._header, 4);
 				ArrayFunctions.WriteToArray(Groups[i].Subs.NumberOfColors, Groups[i]._header, 8);
 				// Reserved(0) is always up-to-date
-				if (i == 0) Groups[i]._dataOffset = 0;
-				else Groups[i]._dataOffset = Groups[i - 1]._dataOffset + Groups[i - 1]._length;
+				if (i == 0) Groups[i].dataOffset = 0;
+				else Groups[i].dataOffset = Groups[i - 1].dataOffset + Groups[i - 1].length;
 			}
 		}
 		
 		/// <summary>Gets sum of Groups.Length values</summary>
-		int _length
+		int length
 		{
 			get
 			{
 				int l = 0;
-				for (int i = 0; i < Groups.Count; i++) l += Groups[i]._length;
+				for (int i = 0; i < Groups.Count; i++) l += Groups[i].length;
 				return l;
 			}
 		}
 		
-		int _dataOffset { get { return NumberOfGroups * Group._headerLength; } }
+		int dataOffset { get { return NumberOfGroups * Group._headerLength; } }
 	}
 }

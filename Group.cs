@@ -1,6 +1,6 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2019 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2022 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the MPL v2.0 or later
  * 
  * Full notice in DatFile.cs
@@ -112,7 +112,7 @@ namespace Idmr.ImageFormat.Dat
 		#endregion public properties
 
 		/// <summary>Sum of Subs.Length values</summary>
-		internal int _length
+		internal int length
 		{
 			get
 			{
@@ -122,7 +122,7 @@ namespace Idmr.ImageFormat.Dat
 			}
 		}
 		/// <summary>***Must be updated at the Dat level***</summary>
-		internal int _dataOffset
+		internal int dataOffset
 		{
 			get { return BitConverter.ToInt32(_header, 0x14); }
 			set { ArrayFunctions.WriteToArray(value, _header, 0x14); }

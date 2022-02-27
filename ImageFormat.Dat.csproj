@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{CB13D130-495C-4F73-9B23-FE688973EF0D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Idmr.ImageFormat</RootNamespace>
+    <AssemblyName>Idmr.ImageFormat.Dat</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Idmr.ImageFormat.Dat.XML</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Idmr.Common, Version=1.0.2.18456, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Libraries\Idmr.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="SevenZip\Compression\LZMA\Encoder.LiteralEncoder.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Encoder.LenPriceTableEncoder.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Encoder.Optimal.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Decoder.LiteralDecoder.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Decoder.LenDecoder.cs" />
+    <Compile Include="SevenZip\Compression\RangeCoder\BitDecoder.cs" />
+    <Compile Include="SevenZip\Compression\RangeCoder\BitTreeDecoder.cs" />
+    <Compile Include="SevenZip\Compression\RangeCoder\Decoder.cs" />
+    <Compile Include="DatFile.cs" />
+    <Compile Include="Group.cs" />
+    <Compile Include="GroupCollection.cs" />
+    <Compile Include="Sub.cs" />
+    <Compile Include="SubCollection.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SevenZip\ICoder.cs" />
+    <Compile Include="SevenZip\CRC.cs" />
+    <Compile Include="SevenZip\Compression\LZ\IMatchFinder.cs" />
+    <Compile Include="SevenZip\Compression\LZ\BinTree.cs" />
+    <Compile Include="SevenZip\Compression\LZ\InWindow.cs" />
+    <Compile Include="SevenZip\Compression\LZ\OutWindow.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Base.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Decoder.cs" />
+    <Compile Include="SevenZip\Compression\LZMA\Encoder.cs" />
+    <Compile Include="SevenZip\Compression\RangeCoder\Encoder.cs" />
+    <Compile Include="SevenZip\Compression\RangeCoder\BitEncoder.cs" />
+    <Compile Include="SevenZip\Compression\RangeCoder\BitTreeEncoder.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="SevenZip\Compression\LZMA\Encoder.LenEncoder.cs" />
+    <None Include="DAT_Image_File.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="License.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Readme.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PostBuildEvent>copy /y "$(TargetPath)" "C:\Users\Me\Documents\Visual Studio 2008\Libraries\"</PostBuildEvent>
+  </PropertyGroup>
+</Project>

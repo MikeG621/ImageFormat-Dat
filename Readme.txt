@@ -2,13 +2,18 @@ Idmr.ImageFormat.Dat.dll
 ========================
 
 Author: Michael Gaisser (mjgaisser@gmail.com)
-Version: 2.3
-Date: 2021.06.06
+Version: 2.4
+Date: 2022.02.27
 
 Library for reading LucasArts *.DAT backdrop files
 
 ==========
 Version History
+
+v2.4 - 27 Feb 2022
+ - Added Format 25C capability
+   - Image isn't decompressed until first accessed
+ - Format 25 now takes up half the memory after loading
 
 v2.3 - 06 Jun 2021
  - Empty Groups are now ignored during read
@@ -59,9 +64,11 @@ Programmer's reference can be found in help/Idmr.ImageFormat.Dat.chm
 ==========
 Copyright Information
 
-Copyright (C) Michael Gaisser, 2009-2021
+Copyright (C) Michael Gaisser, 2009-2022
 This library file and related files are licensed under the Mozilla Public License
-v2.0 or later.  See MPL.txt for further details.
+v2.0 or later.  See License.txt for further details.
+
+The LZMA SDK is written and placed in the public domain by Igor Pavlov.
 
 "Star Wars" and related items are trademarks of LucasFilm Ltd and
 LucasArts Entertainment Co.

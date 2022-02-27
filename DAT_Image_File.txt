@@ -2,7 +2,7 @@ DAT Image File
 Author: Michael Gaisser (mjgaisser@gmail.com)
 Site: https://github.com/MikeG621
 Released: 2010.02.14
-Updated: 2019.09.21
+Updated: 2022.02.27
 =====
 
 The .DAT file used in X-wing Alliance is an archive file that can contain
@@ -20,7 +20,7 @@ NAME	LENGTH	DESC
 ----	------	----
 BYTE	1	unsigned 8-bit
 SHORT	2	signed Int16
-INT	4	signed Int32
+INT 	4	signed Int32
 LONG	8	signed Int64
 
 --
@@ -61,10 +61,15 @@ struct Sub
 	0x00	SubHeader
 	0x12	ImageHeader
 	0x3E	Colors[ImageHeader.NumberOfColors]
+#if (Type!=25C)
 		Row[Height]
-		#if (Type==7 || Type==23)
+#else
+	0x3E	BYTE[5]	CompressionParameters
+	0x43	BYTE[] LzmaData
+#endif
+#if (Type==7 || Type==23)
 		BYTE	Reserved (0)
-		#endif
+#endif
 }
 
 struct SubHeader (size 0x12)
@@ -105,49 +110,49 @@ struct Color (size 0x3)
 
 struct Row
 {
-	#if (Type==7 || Type==23)
+#if (Type==7 || Type==23)
 	BYTE	NumberOfOperations
 	OpCode[NumberOfOperations]
-	#elseif (Type==24 || Type==25)
+#elseif (Type==24 || Type==25)
 	Pixel[Width]
-	#endif
+#endif
 }
 
 struct OpCode
 {
 	BYTE	Value
-	#if (Type==7 && ~Value & 0x80) (Read)
+#if (Type==7 && ~Value & 0x80) (Read)
 	BYTE[Value &0x7F]	ColorIndexes
-	#elseif (Type==23 && Value & 0xC0) (Read with Alpha)
+#elseif (Type==23 && Value & 0xC0) (Read with Alpha)
 	Pixel[Value & 0x3F]
-	#elseif (Type==23 && Value < 0x40) (Read Opaque)
+#elseif (Type==23 && Value < 0x40) (Read Opaque)
 	BYTE[Value]
-	#else (Short Transparent)
-	#endif
+#else (Short Transparent)
+#endif
 }
 
 struct Pixel
 {
-	#if (Type==23)
+#if (Type==23)
 	BYTE	Alpha
-	#endif
-	#if (Type==25)
+#endif
+#if (Type==25)
 	BYTE	Blue
 	BYTE	Green
 	BYTE	Red
-	#else
+#else
 	BYTE	ColorIndex
-	#endif
-	#if (Type==24 || Type==25)
+#endif
+#if (Type==24 || Type==25)
 	BYTE	Alpha
-	#endif
+#endif
 }
 
 =====
 DAT Structure Details
 
 Yet another image format for the X-wing series, although this one is XWA only.
-Four different raw formats are bundled under this one type, the difference is
+Five different raw formats are bundled under this one type, the difference is
 the type of bitmaps that are displayed. More on that in a sec.
 
 As mentioned at the beginning, the images are categorized as Groups and Subs.
@@ -207,6 +212,12 @@ type. The Type determines the type (gasp) of image and how it needs to be read.
 0x17	Alpha blended bitmap (32bpp), compressed
 0x18	Alpha blended bitmap (32bpp), uncompressed
 0x19	Full ARGB image (32bpp), uncompressed
+0x19	Full ARGB image (32bpp), LZMA compressed (aka "25C")
+
+Yes, those are both 0x19. The way that compression gets flagged is that the
+ImageHeader.NumberOfColors (couple paragraphs down) is set to 1. There really
+aren't any colors defined so that array is empty, but that's the way that 25C
+is defined.
 
 Width and Height are easy enough, they're one-indexed values. The GroupID and
 SubID values should also be self-explanatory. SubHeader.Length could also be
@@ -233,7 +244,8 @@ Okay, here's where most of the magic happens. The only common similarity
 between the first three Types are the length of the Rows array itself, and that
 they are all indexed color images. Once we get to Type 25 (which again requires
 a hook to be installed) then there's little to no processing that needs to be
-done and the size of Row doubles.
+done and the size of Row doubles. For Type 25C, the rows are omitted entirely
+since the data is LZMA compressed and is processed separately.
 
 First off, Type 7; Transparent. Mostly used as the backdrop type, it also
 has the tightest compression rate for filesize. The Row starts off with the
@@ -296,3 +308,8 @@ Sub.ImageHeaderOffset is 0x2C since there's no Color array to skip over.
 
 For the image data itself, it's simple raw pixel data at this point, four bytes
 in the BGRA order with no extra termination data, they go from one to the next.
+
+Type "25C"; Full ARGB, LZMA compressed, requires 32-bit hook. The
+data is the same as 25, however it's stored as LZMA compressed data. Per the
+LZMA documentation, the first 5 bytes are the compression parameters that
+defines exactly how it's stored.
