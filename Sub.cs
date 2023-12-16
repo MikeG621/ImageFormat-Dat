@@ -65,7 +65,9 @@ namespace Idmr.ImageFormat.Dat
 			/// <summary>32bpp ARGB</summary>
 			Full32bppArgb,
 			/// <summary>"25C", 32bpp ARGB with LZMA compression</summary>
-			Compressed32bppArgb
+			Compressed32bppArgb,
+			/// <summary>32bpp ARGB with BCn compression</summary>
+			BC7Compressed
 		};
 
 		#region constructors
@@ -92,10 +94,15 @@ namespace Idmr.ImageFormat.Dat
 			if (BitConverter.ToInt32(_headers, offset + 0x24) != _imageHeaderReserved)
 				throw new ArgumentException(DatFile._valEx, "raw"); // Reserved
 			int numberOfColors = BitConverter.ToInt32(_headers, offset + 0x28);
-			if (_type == ImageType.Full32bppArgb && numberOfColors == 1)
+			if (_type == ImageType.Full32bppArgb)
 			{
-				_type = ImageType.Compressed32bppArgb;
-				numberOfColors = 0;
+				if (numberOfColors == 1)
+				{
+					_type = ImageType.Compressed32bppArgb;
+					numberOfColors = 0;
+				}
+				else if ((length - imageDataOffset) < (_width * _height * 4))
+					_type = ImageType.BC7Compressed;
 			}
 			if (numberOfColors != 0)
 				_colors = new Color[numberOfColors];
@@ -270,6 +277,9 @@ namespace Idmr.ImageFormat.Dat
 						GraphicsFunctions.CopyBytesToImage(pixelsArgb, bdArgb);
 					}
 					image.UnlockBits(bdArgb);
+					break;
+				case ImageType.BC7Compressed:
+					// TODO: BC7. do nothing for now, unsupported
 					break;
 			}
 			return image;

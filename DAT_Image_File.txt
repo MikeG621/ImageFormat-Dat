@@ -2,7 +2,7 @@ DAT Image File
 Author: Michael Gaisser (mjgaisser@gmail.com)
 Site: https://github.com/MikeG621
 Released: 2010.02.14
-Updated: 2022.02.27
+Updated: 2023.12.16
 =====
 
 The .DAT file used in X-wing Alliance is an archive file that can contain
@@ -11,6 +11,7 @@ etc. Portions of the format are similar or directly ripped from the .ACT format
 of TIE and XvT. The images are separated into "Groups" and "Subs", with the
 Group being the base image, and the Sub being variants or animation frames.
 
+**NOTE** Addition of BC7 is WIP, not all information has been added **
 =====
 DAT Structure
 
@@ -207,17 +208,21 @@ clue would be that the IDs change in the images.
 Subs contain two headers, one for the sub itself and the other is actually the
 heading from the ACT image format. Why they felt the need to use the ACT header
 is unknown, unless they just modified the existing read/write code with a new
-type. The Type determines the type (gasp) of image and how it needs to be read.
+type. The Type determines the format of the image and how it needs to be read.
 0x07	Bitmap with transparency (8bpp), compressed
 0x17	Alpha blended bitmap (32bpp), compressed
 0x18	Alpha blended bitmap (32bpp), uncompressed
 0x19	Full ARGB image (32bpp), uncompressed
 0x19	Full ARGB image (32bpp), LZMA compressed (aka "25C")
+0x19	BC7 Compressed ("BC7")
 
-Yes, those are both 0x19. The way that compression gets flagged is that the
-ImageHeader.NumberOfColors (couple paragraphs down) is set to 1. There really
-aren't any colors defined so that array is empty, but that's the way that 25C
-is defined.
+Yes, the last ones are all 0x19. This is more a "Hook Image" format value.
+Full ARGB uncompressed is simple type 0x19, no colors. LZMA compressed or "25C"
+is indicated by having ImageHeader.NumberOfColors (couple paragraphs down)
+equal to 1. There really aren't any colors defined so that array is empty, but
+that's the way that 25C is flagged. BC7 gets detected if the pixel data is
+smaller than it would be for fully uncompressed ARGB, again no colors.
+In other words: SubHeader.Length - ImageHeaderLength < Width * Height * 4.
 
 Width and Height are easy enough, they're one-indexed values. The GroupID and
 SubID values should also be self-explanatory. SubHeader.Length could also be
@@ -232,7 +237,8 @@ the offset from the beginning of the ImageHeader to the first Row. Equates to
 0x2C+NumberOfColors*3. For those of you paying attention, this means the total
 length of the Row array is SubHeader.Length-ImageDataOffset. Working down the
 rest of the header, a lot of values we've seen already, and NumberOfColors
-finishes it off.
+finishes it off. Many of the "Reserved" values throughout are placeholders that
+are used for storing values in-game.
 
 The Colors array is a simple 3-byte RGB list, with the first index being the
 transparency color. Typically it's (0,0,0), and if black is used in the image
@@ -313,3 +319,8 @@ Type "25C"; Full ARGB, LZMA compressed, requires 32-bit hook. The
 data is the same as 25, however it's stored as LZMA compressed data. Per the
 LZMA documentation, the first 5 bytes are the compression parameters that
 defines exactly how it's stored.
+
+Type "BC7"; BCn compressed, requires 32-bit hook. The data length is the size
+of the padded area, with padding up to multiples of 4 in both width and height.
+((Width+3)/4 * 4) * ((Height+3)/4 * 4). Note that for dimensions that are
+already divisible by 4, this is simply Width * Height.
