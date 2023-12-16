@@ -323,4 +323,5 @@ defines exactly how it's stored.
 Type "BC7"; BCn compressed, requires 32-bit hook. The data length is the size
 of the padded area, with padding up to multiples of 4 in both width and height.
 ((Width+3)/4 * 4) * ((Height+3)/4 * 4). Note that for dimensions that are
-already divisible by 4, this is simply Width * Height.
+already divisible by 4, this is simply Width * Height. Pixels are run through
+the compression algorithm in 4x4 blocks.

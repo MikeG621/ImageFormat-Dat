@@ -67,6 +67,7 @@ namespace Idmr.ImageFormat.Dat
 			/// <summary>"25C", 32bpp ARGB with LZMA compression</summary>
 			Compressed32bppArgb,
 			/// <summary>32bpp ARGB with BCn compression</summary>
+			/// <remarks>CURRENTLY UNSUPPORTED</remarks>
 			BC7Compressed
 		};
 
