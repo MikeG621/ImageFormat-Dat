@@ -4,10 +4,11 @@
  * Licensed under the GPL v2.0 or later
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.4
+ * VERSION: 2.4+
  */
 
 /* CHANGE LOG
+ * [NEW] BC7 detection, format currently unsupported and returns a blank image
  * v2.4, 220227
  * [UPD] _rows set to null for Full32bpp images since there's no processing
  * [NEW] Format "25C", 32bpp LZMA compressed
@@ -293,9 +294,11 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed, or simply the original <paramref name="image"/> as <see cref="PixelFormat.Format32bppArgb"/> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</param>
 		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed, or <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</param>
 		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters. <paramref name="colors"/> is ignored and can be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.<br/>
-		/// If <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then instead of being row data the array is the compressed LZMA data.</remarks>
+		/// If <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then instead of being row data the array is the compressed LZMA data.<br/>
+		/// **<see cref="ImageType.BC7Compressed"/> is not supported!**</remarks>
 		/// <returns>Encoded byte data of <paramref name="trimmedImage"/></returns>
-		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is null and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</exception>
+		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is <b>null</b> and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</exception>
+		/// <exception cref="NotImplementedException"><paramref name="type"/> is <see cref="ImageType.BC7Compressed"/></exception>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
 			if (type == ImageType.Full32bppArgb || type == ImageType.Compressed32bppArgb)
@@ -319,6 +322,11 @@ namespace Idmr.ImageFormat.Dat
 					rawData = compressedData.ToArray();
 				}
 				return rawData;
+			}
+
+			if (type == ImageType.BC7Compressed)
+			{
+				throw new NotImplementedException("BC7 encoding is not supported, choose another format.");
 			}
 
 			byte[] mask = null;

@@ -10,6 +10,8 @@ Library for reading LucasArts *.DAT backdrop files
 ==========
 Version History
 
+ - BC7 format detection, currently unsupported and returns a blank image
+
 v2.4 - 27 Feb 2022
  - Added Format 25C capability
    - Image isn't decompressed until first accessed
