@@ -11,7 +11,6 @@ etc. Portions of the format are similar or directly ripped from the .ACT format
 of TIE and XvT. The images are separated into "Groups" and "Subs", with the
 Group being the base image, and the Sub being variants or animation frames.
 
-**NOTE** Addition of BC7 is WIP, not all information has been added **
 =====
 DAT Structure
 
@@ -62,14 +61,15 @@ struct Sub
 	0x00	SubHeader
 	0x12	ImageHeader
 	0x3E	Colors[ImageHeader.NumberOfColors]
-#if (Type!=25C)
-		Row[Height]
-#else
+#if (Type==25C)
 	0x3E	BYTE[5]	CompressionParameters
 	0x43	BYTE[] LzmaData
+#elseif (Type==BC7)
+	0x3E	BYTE[] EncodedBlockData
+#else		Row[Height]
 #endif
 #if (Type==7 || Type==23)
-		BYTE	Reserved (0)
+			BYTE	Reserved (0)
 #endif
 }
 
@@ -324,4 +324,6 @@ Type "BC7"; BCn compressed, requires 32-bit hook. The data length is the size
 of the padded area, with padding up to multiples of 4 in both width and height.
 ((Width+3)/4 * 4) * ((Height+3)/4 * 4). Note that for dimensions that are
 already divisible by 4, this is simply Width * Height. Pixels are run through
-the compression algorithm in 4x4 blocks.
+the compression algorithm in 4x4 blocks. The full details of how BCn works is
+left to you if you're curious, I'm using an external source for the algorithm
+instead of trying to recreate it.

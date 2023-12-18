@@ -1,6 +1,6 @@
 /*
  * Idmr.ImageFormat.Dat, Allows editing capability of LA *.DAT Image files
- * Copyright (C) 2009-2022 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2023 Michael Gaisser (mjgaisser@gmail.com)
  * 
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the Mozilla Public License; either version 2.0 of the
@@ -35,9 +35,9 @@
  * [UPD] Group/Sub converted to class
 */
 
+using Idmr.Common;
 using System;
 using System.IO;
-using Idmr.Common;
 
 namespace Idmr.ImageFormat.Dat
 {
@@ -70,7 +70,7 @@ namespace Idmr.ImageFormat.Dat
 			}
 			catch (Exception x)
 			{
-				if (fs != null) fs.Close();
+				fs?.Close();
 				throw new LoadFileException(x);
 			}
 			_filePath = file;
@@ -133,7 +133,7 @@ namespace Idmr.ImageFormat.Dat
 			}
 			catch (Exception x)
 			{
-				if (fs != null) fs.Close();
+				fs?.Close();
 				if (File.Exists(tempFile)) File.Copy(tempFile, _filePath);	// restore backup if it exists
 				File.Delete(tempFile);	// delete backup if it exists
 				throw new SaveFileException(x);
@@ -188,21 +188,21 @@ namespace Idmr.ImageFormat.Dat
 			}
 		}
 		#endregion public methods
-		
+
 		#region public properties
 		/// <summary>Gets the file name of the Dat object</summary>
 		/// <remarks>Value is <see cref="FilePath"/> without the directory</remarks>
-		public string FileName { get { return StringFunctions.GetFileName(_filePath); } }
-		
+		public string FileName => StringFunctions.GetFileName(_filePath);
+
 		/// <summary>Gets the full path of the Dat object</summary>
 		/// <remarks>Defaults to <b>"newfile.dat"</b></remarks>
-		public string FilePath { get { return _filePath; } }
-		
+		public string FilePath => _filePath;
+
 		/// <summary>Gets the Collection of Groups in the archive</summary>
 		public GroupCollection Groups { get; internal set; }
-		
+
 		/// <summary>Gets the number of Groups in the archive</summary>
-		public short NumberOfGroups { get { return (short)Groups.Count; } }
+		public short NumberOfGroups => (short)Groups.Count;
 
 		/// <summary>Gets the maximum height used for all images</summary>
 		public short UsedHeight
@@ -254,7 +254,7 @@ namespace Idmr.ImageFormat.Dat
 				return l;
 			}
 		}
-		
-		int dataOffset { get { return NumberOfGroups * Group._headerLength; } }
+
+		int dataOffset => NumberOfGroups * Group._headerLength;
 	}
 }

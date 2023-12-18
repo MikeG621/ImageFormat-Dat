@@ -1,14 +1,18 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2022 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2023 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the GPL v2.0 or later
  * 
+ * BC7 implementation based on JeremyAnsel.BcnSharp, Copyright 2023 Jérémy Ansel
+ * Licensed under the MIT License.
+ * 
  * Full notice in DatFile.cs
- * VERSION: 2.4+
+ * VERSION: 2.5
  */
 
 /* CHANGE LOG
- * [NEW] BC7 detection, format currently unsupported and returns a blank image
+ * v2.5, 231218
+ * [NEW] Format BC7 support
  * v2.4, 220227
  * [UPD] _rows set to null for Full32bpp images since there's no processing
  * [NEW] Format "25C", 32bpp LZMA compressed
@@ -26,11 +30,12 @@
  * [UPD] allowed Colors.set without defined _image
  */
 
+using Idmr.Common;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using Idmr.Common;
+using System.Runtime.InteropServices;
 
 namespace Idmr.ImageFormat.Dat
 {
@@ -63,12 +68,11 @@ namespace Idmr.ImageFormat.Dat
 			Blended = 23,
 			/// <summary>16bpp Indexed Alpha uncompressed</summary>
 			UncompressedBlended,
-			/// <summary>32bpp ARGB</summary>
+			/// <summary>32bpp ARGB per 32bpp hook</summary>
 			Full32bppArgb,
-			/// <summary>"25C", 32bpp ARGB with LZMA compression</summary>
+			/// <summary>"25C", 32bpp ARGB with LZMA compression per 32bpp hook</summary>
 			Compressed32bppArgb,
-			/// <summary>32bpp ARGB with BCn compression</summary>
-			/// <remarks>CURRENTLY UNSUPPORTED</remarks>
+			/// <summary>32bpp ARGB with BCn compression per 32bpp hook</summary>
 			BC7Compressed
 		};
 
@@ -116,8 +120,8 @@ namespace Idmr.ImageFormat.Dat
 			// Sub.Rows[]
 			_rows = new byte[length - imageDataOffset];
 			ArrayFunctions.TrimArray(raw, offset, _rows);
-			if (_type != ImageType.Compressed32bppArgb)
-				_image = DecodeImage(_rows, _width, _height, _colors, _type);	// don't unzip until it's called
+			if (_type != ImageType.Compressed32bppArgb && _type != ImageType.BC7Compressed)
+				_image = DecodeImage(_rows, _width, _height, _colors, _type);	// don't decompress until it's called for
 			if (_type == ImageType.Full32bppArgb) _rows = null;
 		}
 		/// <summary>Create a new sub from the provided image and IDs</summary>
@@ -141,7 +145,7 @@ namespace Idmr.ImageFormat.Dat
 			_rows = EncodeImage(image, _type, (Color[])image.Palette.Entries.Clone(), out _image, out _colors);
 			_height = (short)_image.Height;
 			_width = (short)_image.Width;
-			_length = _rows.Length + imageDataOffset;
+			_length = _rows.Length + _imageDataOffset;
 			UpdateHeader();
 			if (_type == ImageType.Full32bppArgb) _rows = null;
 		}
@@ -171,10 +175,10 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="height">Image height</param>
 		/// <param name="colors">Defined Color array to be used for the image</param>
 		/// <param name="type">Encoding protocol used for <paramref name="rawData"/></param>
-		/// <returns>If <paramref name="type"/> is <see cref="ImageType.Transparent"/>, returns a <see cref="PixelFormat.Format8bppIndexed"/> image.<br/>
-		/// Otherwise the returned image will be <see cref="PixelFormat.Format32bppArgb"/>.
-		/// <paramref name="colors"/> is ignored and allowed to be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.<br/>
-		/// if <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then <paramref name="rawData"/> must be the LZMA compression data.</returns>
+		/// <returns>If <paramref name="type"/> is <see cref="ImageType.Transparent"/>, returns a <see cref="PixelFormat.Format8bppIndexed"/> image, otherwise the returned image will be <see cref="PixelFormat.Format32bppArgb"/>.<br/>
+		/// <paramref name="colors"/> is ignored and allowed to be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.<br/>
+		/// If <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then <paramref name="rawData"/> must be the LZMA compression data.<br/>
+		/// If <paramref name="type"/> is <see cref="ImageType.BC7Compressed"/>, then <paramref name="rawData"/> must be the encoded block data.</returns>
 		public static Bitmap DecodeImage(byte[] rawData, int width, int height, Color[] colors, ImageType type)
 		{
 			int offset = 0;
@@ -259,10 +263,11 @@ namespace Idmr.ImageFormat.Dat
 					break;
 				case ImageType.Full32bppArgb:
 				case ImageType.Compressed32bppArgb:
+				case ImageType.BC7Compressed:
 					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
 					BitmapData bdArgb = GraphicsFunctions.GetBitmapData(image);
 					if (type == ImageType.Full32bppArgb) GraphicsFunctions.CopyBytesToImage(rawData, bdArgb); // already good data
-					else
+					else if (type == ImageType.Compressed32bppArgb)
 					{
 						byte[] lzmaParameters = new byte[5];
 						ArrayFunctions.TrimArray(rawData, 0, lzmaParameters);
@@ -278,10 +283,21 @@ namespace Idmr.ImageFormat.Dat
 						}
 						GraphicsFunctions.CopyBytesToImage(pixelsArgb, bdArgb);
 					}
+					else if (type == ImageType.BC7Compressed)
+					{	// This else block covered by MIT License
+						var pixelsArgb = new byte[bdArgb.Stride * bdArgb.Height];
+						GCHandle pixelsHandle = GCHandle.Alloc(pixelsArgb, GCHandleType.Pinned);
+						GCHandle blocksHandle = GCHandle.Alloc(rawData, GCHandleType.Pinned);
+
+						try { BC7_Decode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), width, height); }
+						finally
+						{
+							pixelsHandle.Free();
+							blocksHandle.Free();
+						}
+						GraphicsFunctions.CopyBytesToImage(pixelsArgb, bdArgb);
+					}
 					image.UnlockBits(bdArgb);
-					break;
-				case ImageType.BC7Compressed:
-					// TODO: BC7. do nothing for now, unsupported
 					break;
 			}
 			return image;
@@ -291,17 +307,16 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="image">The image to encode</param>
 		/// <param name="type">The encoding protocol to use</param>
 		/// <param name="colors">The color array to use</param>
-		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed, or simply the original <paramref name="image"/> as <see cref="PixelFormat.Format32bppArgb"/> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</param>
-		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed, or <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</param>
+		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed, or simply the original <paramref name="image"/> as <see cref="PixelFormat.Format32bppArgb"/> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.</param>
+		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed, or <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.</param>
 		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters. <paramref name="colors"/> is ignored and can be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.<br/>
 		/// If <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then instead of being row data the array is the compressed LZMA data.<br/>
-		/// **<see cref="ImageType.BC7Compressed"/> is not supported!**</remarks>
+		/// If <paramref name="type"/> is <see cref="ImageType.BC7Compressed"/>, then instead of being row data the array is the compressed BC7 block data.</remarks>
 		/// <returns>Encoded byte data of <paramref name="trimmedImage"/></returns>
-		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is <b>null</b> and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.</exception>
-		/// <exception cref="NotImplementedException"><paramref name="type"/> is <see cref="ImageType.BC7Compressed"/></exception>
+		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is <b>null</b> and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.</exception>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
-			if (type == ImageType.Full32bppArgb || type == ImageType.Compressed32bppArgb)
+			if (type == ImageType.Full32bppArgb || type == ImageType.Compressed32bppArgb || type == ImageType.BC7Compressed)
 			{
 				trimmedImage = new Bitmap(image);	// convert to 32bppArgb
 				BitmapData bdArgb = GraphicsFunctions.GetBitmapData(trimmedImage);
@@ -310,25 +325,43 @@ namespace Idmr.ImageFormat.Dat
 				trimmedImage.UnlockBits(bdArgb);
 				trimmedColors = null;
 				if (type == ImageType.Full32bppArgb) return pixelsArgb;
-				byte[] rawData;
-				using (var compressedData = new MemoryStream(pixelsArgb.Length + 5))
+				byte[] rawData = null;
+				if (type == ImageType.Compressed32bppArgb)
 				{
-					using (var pixelData = new MemoryStream(pixelsArgb))
+					using (var compressedData = new MemoryStream(pixelsArgb.Length + 5))
 					{
-						var encoder = new SevenZip.Compression.LZMA.Encoder();
-						encoder.WriteCoderProperties(compressedData);
-						encoder.Code(pixelData, compressedData, pixelData.Length, -1, null);
+						using (var pixelData = new MemoryStream(pixelsArgb))
+						{
+							var encoder = new SevenZip.Compression.LZMA.Encoder();
+							encoder.WriteCoderProperties(compressedData);
+							encoder.Code(pixelData, compressedData, pixelData.Length, -1, null);
+						}
+						rawData = compressedData.ToArray();
 					}
-					rawData = compressedData.ToArray();
+				}
+				else // BC7
+				{   // This else block covered by MIT License
+					int blocksWidth = image.Width + (image.Width % 4 == 0 ? 0 : 4 - image.Width % 4);
+					int blocksHeight = image.Height + (image.Height % 4 == 0 ? 0 : 4 - image.Height % 4);
+
+					byte[] blockData = new byte[blocksWidth * blocksHeight];
+
+					GCHandle pixelsHandle = GCHandle.Alloc(pixelsArgb, GCHandleType.Pinned);
+					GCHandle blocksHandle = GCHandle.Alloc(blockData, GCHandleType.Pinned);
+
+					try { BC7_Encode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), image.Width, image.Height); }
+					finally
+					{
+						pixelsHandle.Free();
+						blocksHandle.Free();
+					}
+
+					rawData = blockData;
 				}
 				return rawData;
 			}
 
-			if (type == ImageType.BC7Compressed)
-			{
-				throw new NotImplementedException("BC7 encoding is not supported, choose another format.");
-			}
-
+			#region indexed
 			byte[] mask = null;
 			if (colors == null)
 				throw new ArgumentNullException("colors", "Colors is required for all types except Full32bppArgb");
@@ -468,12 +501,13 @@ namespace Idmr.ImageFormat.Dat
 			byte[] temp = new byte[offset];
 			ArrayFunctions.TrimArray(rows, 0, temp);
 			return temp;
+			#endregion
 		}
 
 		/// <summary>Sets the image of the Sub</summary>
 		/// <param name="image">The image to be used</param>
 		/// <remarks>Unused color indexes will be removed.<br/>
-		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed<br/>
+		/// If <see cref="Colors"/> is undefined, is initialized to the default 256 color palette. Unused indexes will be removed.<br/>
 		/// If <paramref name="image"/> is <see cref="PixelFormat.Format8bppIndexed"/>, Colors will initialize to the image's palette.</remarks>
 		public void SetImage(Bitmap image)
 		{
@@ -482,7 +516,7 @@ namespace Idmr.ImageFormat.Dat
 			_rows = EncodeImage(image, _type, (Color[])_colors.Clone(), out _image, out _colors);
 			_height = (short)_image.Height;
 			_width = (short)_image.Width;
-			_length = _rows.Length + imageDataOffset;
+			_length = _rows.Length + _imageDataOffset;
 			UpdateHeader();
 			if (_type == ImageType.Full32bppArgb) _rows = null;
 		}
@@ -530,15 +564,15 @@ namespace Idmr.ImageFormat.Dat
 		/// <exception cref="InvalidOperationException">Attempted to set an indexed format and <see cref="Colors"/> is <b>null</b>.</exception>
 		public ImageType Type
 		{
-			get { return _type; }
+			get => _type;
 			set
 			{
-				if (value != ImageType.Full32bppArgb && value != ImageType.Compressed32bppArgb && _colors == null)
+				if (value != ImageType.Full32bppArgb && value != ImageType.Compressed32bppArgb && value != ImageType.BC7Compressed && _colors == null)
 					throw new InvalidOperationException("Cannot change to indexed format prior to assigning color palette.");
 				if (_image != null)
 				{
 					_rows = EncodeImage(_image, value, (_colors != null ? (Color[])_colors.Clone() : null), out _image, out _colors);
-					_length = _rows.Length + imageDataOffset;
+					_length = _rows.Length + _imageDataOffset;
 				}
 				_type = value;
 				UpdateHeader();
@@ -548,16 +582,16 @@ namespace Idmr.ImageFormat.Dat
 
 		/// <summary>Gets the width of the image</summary>
 		/// <remarks>If <see cref="Image"/> is undefined, value is <b>0</b></remarks>
-		public short Width { get { return _width; } }
+		public short Width => _width;
 
 		/// <summary>Gets the height of the image</summary>
 		/// <remarks>If <see cref="Image"/> is undefined, value is <b>0</b></remarks>
-		public short Height { get { return _height; } }
+		public short Height => _height;
 
 		/// <summary>Gets or sets the ID of the parent <see cref="Group"/></summary>
 		public short GroupID
 		{
-			get { return _groupID; }
+			get => _groupID;
 			set
 			{
 				_groupID = value;
@@ -568,7 +602,7 @@ namespace Idmr.ImageFormat.Dat
 		/// <summary>Gets or sets the image ID</summary>
 		public short SubID
 		{
-			get { return _subID; }
+			get => _subID;
 			set
 			{
 				_subID = value;
@@ -577,7 +611,7 @@ namespace Idmr.ImageFormat.Dat
 		}
 
 		/// <summary>Gets the defined number of <see cref="Colors"/></summary>
-		public int NumberOfColors { get { return (_colors != null ? _colors.Length : 0); } }
+		public int NumberOfColors => (_colors != null ? _colors.Length : 0);
 
 		/// <summary>Gets or sets the defined colors</summary>
 		/// <remarks><i>value</i> is limited to <b>256</b> colors.<br/>
@@ -586,10 +620,10 @@ namespace Idmr.ImageFormat.Dat
 		/// <exception cref="ArgumentOutOfRangeException"><i>value</i> exceeds 256 colors</exception>
 		public Color[] Colors
 		{
-			get { return _colors; }
+			get => _colors;
 			set
 			{
-				if (value == null && _type != ImageType.Full32bppArgb && _type != ImageType.Compressed32bppArgb) throw new ArgumentNullException("Colors", "Colors cannot be null for indexed image types");
+				if (value == null && _type != ImageType.Full32bppArgb && _type != ImageType.Compressed32bppArgb && _type != ImageType.BC7Compressed) throw new ArgumentNullException("Colors", "Colors cannot be null for indexed image types");
 				if (value != null)
 				{
 					if (value.Length > 256) throw new ArgumentOutOfRangeException("Colors", "256 colors max");
@@ -601,7 +635,7 @@ namespace Idmr.ImageFormat.Dat
 							for (int i = 0; i < value.Length; i++) pal.Entries[i] = value[i];
 							_image.Palette = pal;
 						}
-						else if (_type != ImageType.Full32bppArgb && _type != ImageType.Compressed32bppArgb)
+						else if (_type != ImageType.Full32bppArgb && _type != ImageType.Compressed32bppArgb && _type != ImageType.BC7Compressed)
 						{
 							byte[] maskData = getMaskData(_image);
 							Bitmap temp8bpp = GraphicsFunctions.ConvertTo8bpp(_image, _colors); //force back to 8bpp
@@ -641,7 +675,7 @@ namespace Idmr.ImageFormat.Dat
 			byte[] width = BitConverter.GetBytes(_width);
 			byte[] height = BitConverter.GetBytes(_height);
 			byte[] length = BitConverter.GetBytes(_length);
-			byte[] type = BitConverter.GetBytes((short)(_type == ImageType.Compressed32bppArgb ? ImageType.Full32bppArgb : _type));
+			byte[] type = BitConverter.GetBytes((short)(_type == ImageType.Compressed32bppArgb || _type == ImageType.BC7Compressed ? ImageType.Full32bppArgb : _type));
 			ArrayFunctions.WriteToArray(type, _headers, 0);
 			ArrayFunctions.WriteToArray(width, _headers, 2);
 			ArrayFunctions.WriteToArray(height, _headers, 4);
@@ -651,7 +685,7 @@ namespace Idmr.ImageFormat.Dat
 			ArrayFunctions.WriteToArray(length, _headers, 0xE);
 			ArrayFunctions.WriteToArray(length, _headers, _subHeaderLength);
 			// imageHeaderLength
-			ArrayFunctions.WriteToArray(imageDataOffset, _headers, _subHeaderLength + 8);
+			ArrayFunctions.WriteToArray(_imageDataOffset, _headers, _subHeaderLength + 8);
 			ArrayFunctions.WriteToArray(length, _headers, _subHeaderLength + 0xC);
 			ArrayFunctions.WriteToArray(width, _headers, _subHeaderLength + 0x10);
 			// short 0
@@ -700,6 +734,44 @@ namespace Idmr.ImageFormat.Dat
 		#endregion private methods
 
 		/// <summary>ImageHeader.ImageDataOffset = ImageHeaderLength + NumberOfColors * 3</summary>
-		internal int imageDataOffset { get { return _imageHeaderLength + (_colors != null ? _colors.Length * 3 : 0); } }
+		private int _imageDataOffset { get { return _imageHeaderLength + (_colors != null ? _colors.Length * 3 : 0); } }
+
+		#region imports for BC7
+		[DllImport("JeremyAnsel.BcnSharpLib32.dll", EntryPoint = "BC7_Decode")]
+		private static extern int BC7_Decode32(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		[DllImport("JeremyAnsel.BcnSharpLib64.dll", EntryPoint = "BC7_Decode")]
+		private static extern int BC7_Decode64(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		private static int BC7_Decode(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight)
+		{
+			if (Environment.Is64BitProcess)
+			{
+				return BC7_Decode64(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+			else
+			{
+				return BC7_Decode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+		}
+
+		[DllImport("JeremyAnsel.BcnSharpLib32.dll", EntryPoint = "BC7_Encode")]
+		private static extern int BC7_Encode32(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		[DllImport("JeremyAnsel.BcnSharpLib64.dll", EntryPoint = "BC7_Encode")]
+		private static extern int BC7_Encode64(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		private static int BC7_Encode(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight)
+		{
+			if (Environment.Is64BitProcess)
+			{
+				return BC7_Encode64(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+			else
+			{
+				return BC7_Encode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+		}
+		#endregion
 	}
 }

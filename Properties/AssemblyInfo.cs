@@ -13,9 +13,9 @@ using System.Reflection;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Imperial Department of Military Research")]
 [assembly: AssemblyProduct("Idmr.ImageFormat.Dat")]
-[assembly: AssemblyCopyright("Copyright © Michael Gaisser 2009-2022")]
+[assembly: AssemblyCopyright("Copyright © Michael Gaisser 2009-2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
 // Major.Minor.Build.Revision
-[assembly: AssemblyVersion("2.4.*")]
+[assembly: AssemblyVersion("2.5.*")]

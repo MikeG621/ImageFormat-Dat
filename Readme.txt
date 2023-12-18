@@ -2,15 +2,16 @@ Idmr.ImageFormat.Dat.dll
 ========================
 
 Author: Michael Gaisser (mjgaisser@gmail.com)
-Version: 2.4
-Date: 2022.02.27
+Version: 2.5
+Date: 2023.12.18
 
 Library for reading LucasArts *.DAT backdrop files
 
 ==========
 Version History
 
- - BC7 format detection, currently unsupported and returns a blank image
+v2.5 - 18 Dec 2023
+ - Added BC7 format capability
 
 v2.4 - 27 Feb 2022
  - Added Format 25C capability
@@ -58,6 +59,8 @@ Additional Information
 Instructions:
  - Get latest version of Idmr.Common.dll (v1.1 or later)
  - Add Idmr.Common.dll and Idmr.ImageFormat.Dat.dll to your references
+ - Add both JeremyAnsel.BcnSharpLib32.dll and ~64.dll to the build directory
+   for use as external references.
 
 File format structure can be found in DAT_Image_File.txt
 
@@ -66,11 +69,15 @@ Programmer's reference can be found in help/Idmr.ImageFormat.Dat.chm
 ==========
 Copyright Information
 
-Copyright (C) Michael Gaisser, 2009-2022
+Copyright (C) Michael Gaisser, 2009-2023
 This library file and related files are licensed under the Mozilla Public License
 v2.0 or later.  See License.txt for further details.
 
 The LZMA SDK is written and placed in the public domain by Igor Pavlov.
+
+The BC7 library and implementation are Copyright (C) 2020-2021
+Richard Geldreich, Jr and 2023 Jérémy Ansel, covered by the MIT License.
+See "MIT License.txt" for full details.
 
 "Star Wars" and related items are trademarks of LucasFilm Ltd and
 LucasArts Entertainment Co.
