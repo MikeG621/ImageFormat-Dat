@@ -1,16 +1,17 @@
 ﻿/*
  * Idmr.ImageFormat.Dat, Allows editing capability of LucasArts *.DAT Image files
- * Copyright (C) 2009-2023 Michael Gaisser (mjgaisser@gmail.com)
+ * Copyright (C) 2009-2024 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the GPL v2.0 or later
  * 
- * BC7 implementation based on JeremyAnsel.BcnSharp, Copyright 2023 Jérémy Ansel
+ * BCn implementation based on JeremyAnsel.BcnSharp, Copyright 2023 Jérémy Ansel
  * Licensed under the MIT License.
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.5
+ * VERSION: 2.5+
  */
 
 /* CHANGE LOG
+ * [NEW] Format BC3 and BC5 support
  * v2.5, 231218
  * [NEW] Format BC7 support
  * v2.4, 220227
@@ -73,7 +74,12 @@ namespace Idmr.ImageFormat.Dat
 			/// <summary>"25C", 32bpp ARGB with LZMA compression per 32bpp hook</summary>
 			Compressed32bppArgb,
 			/// <summary>32bpp ARGB with BCn compression per 32bpp hook</summary>
-			BC7Compressed
+			BC7Compressed,
+			/// <summary>32bpp ARGB with BCn compression per 32bpp hook</summary>
+			/// <remarks>Intended for the Concourse</remarks>
+			BC3Compressed,
+			/// <summary>32bpp ARGB with BCn compression per 32bpp hook</summary>
+			BC5Compressed
 		};
 
 		#region constructors
@@ -102,13 +108,10 @@ namespace Idmr.ImageFormat.Dat
 			int numberOfColors = BitConverter.ToInt32(_headers, offset + 0x28);
 			if (_type == ImageType.Full32bppArgb)
 			{
-				if (numberOfColors == 1)
-				{
-					_type = ImageType.Compressed32bppArgb;
-					numberOfColors = 0;
-				}
-				else if ((length - imageDataOffset) < (_width * _height * 4))
-					_type = ImageType.BC7Compressed;
+				if (numberOfColors == 0 && (length - imageDataOffset) < (_width * _height * 4)) _type = ImageType.BC7Compressed;
+				else if (numberOfColors == 1) { _type = ImageType.Compressed32bppArgb; numberOfColors = 0; }
+				else if (numberOfColors == 2) { _type = ImageType.BC3Compressed; numberOfColors = 0; }
+				else if (numberOfColors == 3) { _type = ImageType.BC5Compressed; numberOfColors = 0; }
 			}
 			if (numberOfColors != 0)
 				_colors = new Color[numberOfColors];
@@ -120,7 +123,7 @@ namespace Idmr.ImageFormat.Dat
 			// Sub.Rows[]
 			_rows = new byte[length - imageDataOffset];
 			ArrayFunctions.TrimArray(raw, offset, _rows);
-			if (_type != ImageType.Compressed32bppArgb && _type != ImageType.BC7Compressed)
+			if (_type != ImageType.Compressed32bppArgb && _type != ImageType.BC3Compressed && _type != ImageType.BC5Compressed && _type != ImageType.BC7Compressed)
 				_image = DecodeImage(_rows, _width, _height, _colors, _type);	// don't decompress until it's called for
 			if (_type == ImageType.Full32bppArgb) _rows = null;
 		}
@@ -176,13 +179,13 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="colors">Defined Color array to be used for the image</param>
 		/// <param name="type">Encoding protocol used for <paramref name="rawData"/></param>
 		/// <returns>If <paramref name="type"/> is <see cref="ImageType.Transparent"/>, returns a <see cref="PixelFormat.Format8bppIndexed"/> image, otherwise the returned image will be <see cref="PixelFormat.Format32bppArgb"/>.<br/>
-		/// <paramref name="colors"/> is ignored and allowed to be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.<br/>
+		/// <paramref name="colors"/> is ignored and allowed to be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or BCn.<br/>
 		/// If <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then <paramref name="rawData"/> must be the LZMA compression data.<br/>
-		/// If <paramref name="type"/> is <see cref="ImageType.BC7Compressed"/>, then <paramref name="rawData"/> must be the encoded block data.</returns>
+		/// If <paramref name="type"/> is BCn, then <paramref name="rawData"/> must be the encoded block data.</returns>
 		public static Bitmap DecodeImage(byte[] rawData, int width, int height, Color[] colors, ImageType type)
 		{
 			int offset = 0;
-			Bitmap image = new Bitmap(1, 1);	// dummy assignment, image has to be external to switch block
+			Bitmap image = new Bitmap(1, 1);    // dummy assignment, image has to be external to switch block
 			switch (type)
 			{
 				case ImageType.Transparent:
@@ -192,12 +195,12 @@ namespace Idmr.ImageFormat.Dat
 					// Sub.Rows
 					for (int y = 0; y < bdTrans.Height; y++)
 					{
-						byte numOps = rawData[offset++];	// Row.NumberOfOperations
+						byte numOps = rawData[offset++];    // Row.NumberOfOperations
 						for (int n = 0, x = 0, pos = bdTrans.Stride * y; n < numOps; n++)
 						{
-							byte b = rawData[offset++];	//Row.OpCode
-							if (b >= 0x80) x += (b - 0x80);	// transparent length, OpCode.ColorIndex=0
-							else for (int k = 0; k < b; k++, x++) pixelTrans[pos + x] = rawData[offset++];	// OpCode.ColorIndex
+							byte b = rawData[offset++]; //Row.OpCode
+							if (b >= 0x80) x += (b - 0x80); // transparent length, OpCode.ColorIndex=0
+							else for (int k = 0; k < b; k++, x++) pixelTrans[pos + x] = rawData[offset++];  // OpCode.ColorIndex
 						}
 					}
 					GraphicsFunctions.CopyBytesToImage(pixelTrans, bdTrans);
@@ -214,15 +217,15 @@ namespace Idmr.ImageFormat.Dat
 					// Sub.Rows
 					for (int y = 0; y < bdB.Height; y++)
 					{
-						byte numOps = rawData[offset++];	//Row.NumberOfOperations
+						byte numOps = rawData[offset++];    //Row.NumberOfOperations
 						for (int n = 0, x = 0, pos = bdB.Stride * y; n < numOps; n++)
 						{
-							byte b = rawData[offset++];	// Row.OpCode
-							if (b >= 0xC0) x += (b - 0xC0);	// transparent length, OpCode.ColorIndex=0
+							byte b = rawData[offset++]; // Row.OpCode
+							if (b >= 0xC0) x += (b - 0xC0); // transparent length, OpCode.ColorIndex=0
 							else if (b < 0x40)
 								for (int k = 0; k < b; k++, x++)
-								{	// short read opaque
-									Color c = colors[rawData[offset++]];	//OpCode.ColorIndex
+								{   // short read opaque
+									Color c = colors[rawData[offset++]];    //OpCode.ColorIndex
 									pixelBlend[pos + x * 4] = c.B;
 									pixelBlend[pos + x * 4 + 1] = c.G;
 									pixelBlend[pos + x * 4 + 2] = c.R;
@@ -230,9 +233,9 @@ namespace Idmr.ImageFormat.Dat
 								}
 							else
 								for (int k = 0; k < (b - 0x80); k++, x++)
-								{	// alpha read
-									pixelBlend[pos + x * 4 + 3] = rawData[offset++];	// Pixel.Alpha
-									Color c = colors[rawData[offset++]];	// Pixel.ColorIndex
+								{   // alpha read
+									pixelBlend[pos + x * 4 + 3] = rawData[offset++];    // Pixel.Alpha
+									Color c = colors[rawData[offset++]];    // Pixel.ColorIndex
 									pixelBlend[pos + x * 4] = c.B;
 									pixelBlend[pos + x * 4 + 1] = c.G;
 									pixelBlend[pos + x * 4 + 2] = c.R;
@@ -251,53 +254,64 @@ namespace Idmr.ImageFormat.Dat
 					{
 						for (int x = 0, pos = bdU.Stride * y; x < width; x++)
 						{
-							Color c = colors[rawData[offset++]];	// Pixel.ColorIndex
+							Color c = colors[rawData[offset++]];    // Pixel.ColorIndex
 							pixelUncomp[pos + x * 4] = c.B;
 							pixelUncomp[pos + x * 4 + 1] = c.G;
 							pixelUncomp[pos + x * 4 + 2] = c.R;
-							pixelUncomp[pos + x * 4 + 3] = rawData[offset++];	// Pixel.Alpha
+							pixelUncomp[pos + x * 4 + 3] = rawData[offset++];   // Pixel.Alpha
 						}
 					}
 					GraphicsFunctions.CopyBytesToImage(pixelUncomp, bdU);
 					image.UnlockBits(bdU);
 					break;
 				case ImageType.Full32bppArgb:
-				case ImageType.Compressed32bppArgb:
-				case ImageType.BC7Compressed:
 					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-					BitmapData bdArgb = GraphicsFunctions.GetBitmapData(image);
-					if (type == ImageType.Full32bppArgb) GraphicsFunctions.CopyBytesToImage(rawData, bdArgb); // already good data
-					else if (type == ImageType.Compressed32bppArgb)
+					BitmapData bd32 = GraphicsFunctions.GetBitmapData(image);
+					GraphicsFunctions.CopyBytesToImage(rawData, bd32); // already good data
+					image.UnlockBits(bd32);
+					break;
+				case ImageType.Compressed32bppArgb:
+					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+					BitmapData bdLzma = GraphicsFunctions.GetBitmapData(image);
+					byte[] lzmaParameters = new byte[5];
+					ArrayFunctions.TrimArray(rawData, 0, lzmaParameters);
+					byte[] pixelsArgb = new byte[bdLzma.Stride * bdLzma.Height];
+					using (var compressedData = new MemoryStream(rawData, 5, rawData.Length - 5))
 					{
-						byte[] lzmaParameters = new byte[5];
-						ArrayFunctions.TrimArray(rawData, 0, lzmaParameters);
-						byte[] pixelsArgb = new byte[bdArgb.Stride * bdArgb.Height];
-						using (var compressedData = new MemoryStream(rawData, 5, rawData.Length - 5))
+						using (var pixelData = new MemoryStream(pixelsArgb, true))
 						{
-							using (var pixelData = new MemoryStream(pixelsArgb, true))
-							{
-								var decoder = new SevenZip.Compression.LZMA.Decoder();
-								decoder.SetDecoderProperties(lzmaParameters);
-								decoder.Code(compressedData, pixelData, -1, pixelData.Capacity, null);
-							}
+							var decoder = new SevenZip.Compression.LZMA.Decoder();
+							decoder.SetDecoderProperties(lzmaParameters);
+							decoder.Code(compressedData, pixelData, -1, pixelData.Capacity, null);
 						}
-						GraphicsFunctions.CopyBytesToImage(pixelsArgb, bdArgb);
 					}
-					else if (type == ImageType.BC7Compressed)
-					{	// This else block covered by MIT License
-						var pixelsArgb = new byte[bdArgb.Stride * bdArgb.Height];
-						GCHandle pixelsHandle = GCHandle.Alloc(pixelsArgb, GCHandleType.Pinned);
-						GCHandle blocksHandle = GCHandle.Alloc(rawData, GCHandleType.Pinned);
+					GraphicsFunctions.CopyBytesToImage(pixelsArgb, bdLzma);
+					image.UnlockBits(bdLzma);
+					break;
+				case ImageType.BC3Compressed:
+				case ImageType.BC5Compressed:
+				case ImageType.BC7Compressed:
+					// This section covered by the MIT License
+					image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+					BitmapData bdBCn = GraphicsFunctions.GetBitmapData(image);
+					var pixelsBCn = new byte[bdBCn.Stride * bdBCn.Height];
+					GCHandle pixelsHandle = GCHandle.Alloc(pixelsBCn, GCHandleType.Pinned);
+					GCHandle blocksHandle = GCHandle.Alloc(rawData, GCHandleType.Pinned);
 
-						try { BC7_Decode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), width, height); }
-						finally
-						{
-							pixelsHandle.Free();
-							blocksHandle.Free();
-						}
-						GraphicsFunctions.CopyBytesToImage(pixelsArgb, bdArgb);
+					try
+					{
+						if (type == ImageType.BC3Compressed) BC3_Decode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), width, height);
+						else if (type == ImageType.BC5Compressed) BC5_Decode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), width, height);
+						else BC7_Decode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), width, height);
 					}
-					image.UnlockBits(bdArgb);
+					finally
+					{
+						pixelsHandle.Free();
+						blocksHandle.Free();
+					}
+					GraphicsFunctions.CopyBytesToImage(pixelsBCn, bdBCn);
+
+					image.UnlockBits(bdBCn);
 					break;
 			}
 			return image;
@@ -307,16 +321,17 @@ namespace Idmr.ImageFormat.Dat
 		/// <param name="image">The image to encode</param>
 		/// <param name="type">The encoding protocol to use</param>
 		/// <param name="colors">The color array to use</param>
-		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed, or simply the original <paramref name="image"/> as <see cref="PixelFormat.Format32bppArgb"/> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.</param>
-		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed, or <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.</param>
-		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters. <paramref name="colors"/> is ignored and can be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/> or <see cref="ImageType.Compressed32bppArgb"/>.<br/>
+		/// <param name="trimmedImage"><paramref name="image"/> with unused color indexes removed, or simply the original <paramref name="image"/> as <see cref="PixelFormat.Format32bppArgb"/> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/>.</param>
+		/// <param name="trimmedColors"><paramref name="colors"/> with unused color indexes removed, or <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or BCn.</param>
+		/// <remarks>Unused color indexes are removed from both <paramref name="colors"/> and <paramref name="image"/>, the returned array reflects the trimmed parameters. <paramref name="colors"/> is ignored and can be <b>null</b> if <paramref name="type"/> is <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/>, or BCn.<br/>
 		/// If <paramref name="type"/> is <see cref="ImageType.Compressed32bppArgb"/>, then instead of being row data the array is the compressed LZMA data.<br/>
-		/// If <paramref name="type"/> is <see cref="ImageType.BC7Compressed"/>, then instead of being row data the array is the compressed BC7 block data.</remarks>
+		/// If <paramref name="type"/> is BCn, then instead of being row data the array is the encoded block data.</remarks>
 		/// <returns>Encoded byte data of <paramref name="trimmedImage"/></returns>
-		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is <b>null</b> and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or <see cref="ImageType.BC7Compressed"/>.</exception>
+		/// <exception cref="ArgumentNullException"><paramref name="colors"/> is <b>null</b> and <paramref name="type"/> is not <see cref="ImageType.Full32bppArgb"/>, <see cref="ImageType.Compressed32bppArgb"/> or BCn.</exception>
 		public static byte[] EncodeImage(Bitmap image, ImageType type, Color[] colors, out Bitmap trimmedImage, out Color[] trimmedColors)
 		{
-			if (type == ImageType.Full32bppArgb || type == ImageType.Compressed32bppArgb || type == ImageType.BC7Compressed)
+			if (type == ImageType.Full32bppArgb || type == ImageType.Compressed32bppArgb ||
+				type == ImageType.BC3Compressed || type == ImageType.BC5Compressed || type == ImageType.BC7Compressed)
 			{
 				trimmedImage = new Bitmap(image);	// convert to 32bppArgb
 				BitmapData bdArgb = GraphicsFunctions.GetBitmapData(trimmedImage);
@@ -339,7 +354,7 @@ namespace Idmr.ImageFormat.Dat
 						rawData = compressedData.ToArray();
 					}
 				}
-				else // BC7
+				else
 				{   // This else block covered by MIT License
 					int blocksWidth = image.Width + (image.Width % 4 == 0 ? 0 : 4 - image.Width % 4);
 					int blocksHeight = image.Height + (image.Height % 4 == 0 ? 0 : 4 - image.Height % 4);
@@ -349,7 +364,12 @@ namespace Idmr.ImageFormat.Dat
 					GCHandle pixelsHandle = GCHandle.Alloc(pixelsArgb, GCHandleType.Pinned);
 					GCHandle blocksHandle = GCHandle.Alloc(blockData, GCHandleType.Pinned);
 
-					try { BC7_Encode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), image.Width, image.Height); }
+					try
+					{
+						if (type == ImageType.BC3Compressed) BC3_Encode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), image.Width, image.Height);
+						else if (type == ImageType.BC5Compressed) BC5_Encode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), image.Width, image.Height);
+						else BC7_Encode(blocksHandle.AddrOfPinnedObject(), pixelsHandle.AddrOfPinnedObject(), image.Width, image.Height);
+					}
 					finally
 					{
 						pixelsHandle.Free();
@@ -567,7 +587,7 @@ namespace Idmr.ImageFormat.Dat
 			get => _type;
 			set
 			{
-				if (value != ImageType.Full32bppArgb && value != ImageType.Compressed32bppArgb && value != ImageType.BC7Compressed && _colors == null)
+				if ((value  == ImageType.Transparent || value == ImageType.Blended || value == ImageType.UncompressedBlended) && _colors == null)
 					throw new InvalidOperationException("Cannot change to indexed format prior to assigning color palette.");
 				if (_image != null)
 				{
@@ -623,7 +643,7 @@ namespace Idmr.ImageFormat.Dat
 			get => _colors;
 			set
 			{
-				if (value == null && _type != ImageType.Full32bppArgb && _type != ImageType.Compressed32bppArgb && _type != ImageType.BC7Compressed) throw new ArgumentNullException("Colors", "Colors cannot be null for indexed image types");
+				if (value == null && (_type == ImageType.Transparent || _type == ImageType.Blended || _type == ImageType.UncompressedBlended)) throw new ArgumentNullException("Colors", "Colors cannot be null for indexed image types");
 				if (value != null)
 				{
 					if (value.Length > 256) throw new ArgumentOutOfRangeException("Colors", "256 colors max");
@@ -635,7 +655,7 @@ namespace Idmr.ImageFormat.Dat
 							for (int i = 0; i < value.Length; i++) pal.Entries[i] = value[i];
 							_image.Palette = pal;
 						}
-						else if (_type != ImageType.Full32bppArgb && _type != ImageType.Compressed32bppArgb && _type != ImageType.BC7Compressed)
+						else if (_type == ImageType.Transparent || _type == ImageType.Blended || _type == ImageType.UncompressedBlended)
 						{
 							byte[] maskData = getMaskData(_image);
 							Bitmap temp8bpp = GraphicsFunctions.ConvertTo8bpp(_image, _colors); //force back to 8bpp
@@ -675,7 +695,7 @@ namespace Idmr.ImageFormat.Dat
 			byte[] width = BitConverter.GetBytes(_width);
 			byte[] height = BitConverter.GetBytes(_height);
 			byte[] length = BitConverter.GetBytes(_length);
-			byte[] type = BitConverter.GetBytes((short)(_type == ImageType.Compressed32bppArgb || _type == ImageType.BC7Compressed ? ImageType.Full32bppArgb : _type));
+			byte[] type = BitConverter.GetBytes((short)(_type == ImageType.Compressed32bppArgb || _type == ImageType.BC7Compressed || _type == ImageType.BC3Compressed || _type == ImageType.BC5Compressed ? ImageType.Full32bppArgb : _type));
 			ArrayFunctions.WriteToArray(type, _headers, 0);
 			ArrayFunctions.WriteToArray(width, _headers, 2);
 			ArrayFunctions.WriteToArray(height, _headers, 4);
@@ -698,7 +718,13 @@ namespace Idmr.ImageFormat.Dat
 			if (_colors != null)
 				ArrayFunctions.WriteToArray(_colors.Length, _headers, _subHeaderLength + 0x28);
 			else
-				ArrayFunctions.WriteToArray((_type == ImageType.Compressed32bppArgb ? 1 : 0), _headers, _subHeaderLength + 0x28);
+			{
+				int compression = 0;    // BC7
+				if (_type == ImageType.Compressed32bppArgb) compression = 1;
+				else if (_type == ImageType.BC3Compressed) compression = 2;
+				else if (_type == ImageType.BC5Compressed) compression = 3;
+				ArrayFunctions.WriteToArray(compression, _headers, _subHeaderLength + 0x28);
+			}
 		}
 
 		static Bitmap applyMaskData(Bitmap image, byte[] maskData)
@@ -770,6 +796,82 @@ namespace Idmr.ImageFormat.Dat
 			else
 			{
 				return BC7_Encode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+		}
+		#endregion
+
+		#region imports for BC3
+		[DllImport("JeremyAnsel.BcnSharpLib32.dll", EntryPoint = "BC3_Decode")]
+		private static extern int BC3_Decode32(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		[DllImport("JeremyAnsel.BcnSharpLib64.dll", EntryPoint = "BC3_Decode")]
+		private static extern int BC3_Decode64(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		private static int BC3_Decode(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight)
+		{
+			if (Environment.Is64BitProcess)
+			{
+				return BC3_Decode64(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+			else
+			{
+				return BC3_Decode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+		}
+
+		[DllImport("JeremyAnsel.BcnSharpLib32.dll", EntryPoint = "BC3_Encode")]
+		private static extern int BC3_Encode32(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		[DllImport("JeremyAnsel.BcnSharpLib64.dll", EntryPoint = "BC3_Encode")]
+		private static extern int BC3_Encode64(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		private static int BC3_Encode(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight)
+		{
+			if (Environment.Is64BitProcess)
+			{
+				return BC3_Encode64(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+			else
+			{
+				return BC3_Encode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+		}
+		#endregion
+
+		#region imports for BC5
+		[DllImport("JeremyAnsel.BcnSharpLib32.dll", EntryPoint = "BC5_Decode")]
+		private static extern int BC5_Decode32(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		[DllImport("JeremyAnsel.BcnSharpLib64.dll", EntryPoint = "BC5_Decode")]
+		private static extern int BC5_Decode64(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		private static int BC5_Decode(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight)
+		{
+			if (Environment.Is64BitProcess)
+			{
+				return BC5_Decode64(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+			else
+			{
+				return BC5_Decode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+		}
+
+		[DllImport("JeremyAnsel.BcnSharpLib32.dll", EntryPoint = "BC5_Encode")]
+		private static extern int BC5_Encode32(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		[DllImport("JeremyAnsel.BcnSharpLib64.dll", EntryPoint = "BC5_Encode")]
+		private static extern int BC5_Encode64(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight);
+
+		private static int BC5_Encode(IntPtr pBlock, IntPtr pPixelsRGBA, int pPixelsRGBAWidth, int pPixelsRGBAHeight)
+		{
+			if (Environment.Is64BitProcess)
+			{
+				return BC5_Encode64(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
+			}
+			else
+			{
+				return BC5_Encode32(pBlock, pPixelsRGBA, pPixelsRGBAWidth, pPixelsRGBAHeight);
 			}
 		}
 		#endregion

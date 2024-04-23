@@ -10,6 +10,8 @@ Library for reading LucasArts *.DAT backdrop files
 ==========
 Version History
 
+ - Added BC3 and BC5 format capability
+
 v2.5 - 18 Dec 2023
  - Added BC7 format capability
 
