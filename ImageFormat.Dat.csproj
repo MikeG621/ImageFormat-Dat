@@ -17,6 +17,8 @@
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
     <OldToolsVersion>3.5</OldToolsVersion>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -82,14 +84,9 @@
     <None Include="DAT_Image_File.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="JeremyAnsel.BcnSharpLib32.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="JeremyAnsel.BcnSharpLib64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <Content Include="License.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -111,4 +108,11 @@
   <PropertyGroup>
     <PostBuildEvent>copy /y "$(TargetPath)" "C:\Users\Me\Documents\Visual Studio 2008\Libraries\"</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\..\DatTest\packages\JeremyAnsel.BcnSharp.1.0.6\build\JeremyAnsel.BcnSharp.targets" Condition="Exists('..\..\DatTest\packages\JeremyAnsel.BcnSharp.1.0.6\build\JeremyAnsel.BcnSharp.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\DatTest\packages\JeremyAnsel.BcnSharp.1.0.6\build\JeremyAnsel.BcnSharp.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\DatTest\packages\JeremyAnsel.BcnSharp.1.0.6\build\JeremyAnsel.BcnSharp.targets'))" />
+  </Target>
 </Project>

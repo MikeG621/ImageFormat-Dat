@@ -2,7 +2,7 @@ DAT Image File
 Author: Michael Gaisser (mjgaisser@gmail.com)
 Site: https://github.com/MikeG621
 Released: 2010.02.14
-Updated: 2023.12.16
+Updated: 2024.04.24
 =====
 
 The .DAT file used in X-wing Alliance is an archive file that can contain
@@ -19,8 +19,8 @@ unless otherwise specified:
 NAME	LENGTH	DESC
 ----	------	----
 BYTE	1	unsigned 8-bit
-SHORT	2	signed Int16
-INT 	4	signed Int32
+WORD	2	signed Int16
+DWORD 	4	signed Int32
 LONG	8	signed Int64
 
 --
@@ -32,23 +32,23 @@ Group[File.NumberOfGroups]
 struct FileHeader (size 0x22)
 {
 	0x00	LONG	Reserved (0x5602235657062357)
-	0x08	SHORT	Reserved (1)
-	0x0A	SHORT	NumberOfGroups
-	0x0C	SHORT	NumberOfSubs
-	0x0E	INT	Length
-	0x12	INT	NumberOfColors
+	0x08	WORD	Reserved (1)
+	0x0A	WORD	NumberOfGroups
+	0x0C	WORD	NumberOfSubs
+	0x0E	DWORD	Length
+	0x12	DWORD	NumberOfColors
 	0x16	LONG	Reserved (0)
-	0x1E	INT	DataOffset
+	0x1E	DWORD	DataOffset
 }
 
 struct GroupHeader (size 0x18)
 {
-	0x00	SHORT	GroupID
-	0x02	SHORT	NumberOfSubs
-	0x04	INT	Length
-	0x08	INT	NumberOfColors
+	0x00	WORD	GroupID
+	0x02	WORD	NumberOfSubs
+	0x04	DWORD	Length
+	0x08	DWORD	NumberOfColors
 	0x0C	LONG	Reserved (0)
-	0x14	INT	DataOffset
+	0x14	DWORD	DataOffset
 }
 
 struct Group
@@ -64,7 +64,7 @@ struct Sub
 #if (Type==25C)
 	0x3E	BYTE[5]	CompressionParameters
 	0x43	BYTE[] LzmaData
-#elseif (Type==BC7)
+#elseif (Type==BCn)
 	0x3E	BYTE[] EncodedBlockData
 #else		Row[Height]
 #endif
@@ -75,31 +75,31 @@ struct Sub
 
 struct SubHeader (size 0x12)
 {
-	0x00	SHORT	Type
-	0x02	SHORT	Width
-	0x04	SHORT	Height
-	0x06	INT	Reserved (0)
-	0x0A	SHORT	GroupID
-	0x0C	SHORT	SubID
-	0x0E	INT	Length
+	0x00	WORD	Type
+	0x02	WORD	Width
+	0x04	WORD	Height
+	0x06	DWORD	Reserved (0)
+	0x0A	WORD	GroupID
+	0x0C	WORD	SubID
+	0x0E	DWORD	Length
 }
 
 struct ImageHeader (size 0x2C)
 {
 	// actually an ACT FrameHeader with Type being the Shift value
-	0x00	INT	SubHeader.Length
-	0x04	INT	ImageHeaderLength (0x2C)
-	0x08	INT	ImageDataOffset
-	0x0C	INT	SubHeader.Length
-	0x10	SHORT	Width	(low value INT)
-	0x12	SHORT	Reserved (0)
-	0x14	SHORT	Height	(low value INT)
-	0x16	SHORT	Reserved (0)
+	0x00	DWORD	SubHeader.Length
+	0x04	DWORD	ImageHeaderLength (0x2C)
+	0x08	DWORD	ImageDataOffset
+	0x0C	DWORD	SubHeader.Length
+	0x10	WORD	Width	(low value DWORD)
+	0x12	WORD	Reserved (0)
+	0x14	WORD	Height	(low value DWORD)
+	0x16	WORD	Reserved (0)
 	0x18	LONG	Reserved (0)
-	0x20	SHORT	Type	(low value INT)
-	0x22	SHORT	Reserved (0)
-	0x24	INT	Reserved (0x18)
-	0x28	INT	NumberOfColors
+	0x20	WORD	Type	(low value DWORD)
+	0x22	WORD	Reserved (0)
+	0x24	DWORD	Reserved (0x18)
+	0x28	DWORD	NumberOfColors
 }
 
 struct Color (size 0x3)
@@ -214,15 +214,18 @@ type. The Type determines the format of the image and how it needs to be read.
 0x18	Alpha blended bitmap (32bpp), uncompressed
 0x19	Full ARGB image (32bpp), uncompressed
 0x19	Full ARGB image (32bpp), LZMA compressed (aka "25C")
-0x19	BC7 Compressed ("BC7")
+0x19	BCn Compressed ("BCn")
 
-Yes, the last ones are all 0x19. This is more a "Hook Image" format value.
-Full ARGB uncompressed is simple type 0x19, no colors. LZMA compressed or "25C"
-is indicated by having ImageHeader.NumberOfColors (couple paragraphs down)
-equal to 1. There really aren't any colors defined so that array is empty, but
-that's the way that 25C is flagged. BC7 gets detected if the pixel data is
-smaller than it would be for fully uncompressed ARGB, again no colors.
-In other words: SubHeader.Length - ImageHeaderLength < Width * Height * 4.
+Yes, the last few are all 0x19, and BCn itself is three different formats. The
+value itself is more of a "Hook Image" format value since they were added by
+hooks and are not present in the vanilla game. Full ARGB uncompressed is simple
+type 0x19, no colors. LZMA compressed or "25C" is indicated by having
+ImageHeader.NumberOfColors (couple paragraphs down) equal to 1. There really
+aren't any colors defined so that array is empty, but that's the way that 25C
+is flagged. BC7 gets detected if the pixel data is smaller than it would be for
+fully uncompressed ARGB, with no colors. In other words:
+SubHeader.Length - ImageHeaderLength < Width * Height * 4.
+BC3 is detected if NumberOfColors is 2, and BC5 is indicated if it equals 3.
 
 Width and Height are easy enough, they're one-indexed values. The GroupID and
 SubID values should also be self-explanatory. SubHeader.Length could also be
@@ -320,10 +323,11 @@ data is the same as 25, however it's stored as LZMA compressed data. Per the
 LZMA documentation, the first 5 bytes are the compression parameters that
 defines exactly how it's stored.
 
-Type "BC7"; BCn compressed, requires 32-bit hook. The data length is the size
+Type "BCn"; BCn compressed, requires 32-bit hook. The data length is the size
 of the padded area, with padding up to multiples of 4 in both width and height.
 ((Width+3)/4 * 4) * ((Height+3)/4 * 4). Note that for dimensions that are
 already divisible by 4, this is simply Width * Height. Pixels are run through
 the compression algorithm in 4x4 blocks. The full details of how BCn works is
 left to you if you're curious, I'm using an external source for the algorithm
-instead of trying to recreate it.
+instead of trying to recreate it.  There's the capability of BC3, BC5, and BC7
+to be used.

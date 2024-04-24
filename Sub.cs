@@ -3,11 +3,11 @@
  * Copyright (C) 2009-2024 Michael Gaisser (mjgaisser@gmail.com)
  * Licensed under the GPL v2.0 or later
  * 
- * BCn implementation based on JeremyAnsel.BcnSharp, Copyright 2023 Jérémy Ansel
+ * BCn implementation based on JeremyAnsel.BcnSharp, Copyright 2024 Jérémy Ansel
  * Licensed under the MIT License.
  * 
  * Full notice in DatFile.cs
- * VERSION: 2.5+
+ * VERSION: 2.6
  */
 
 /* CHANGE LOG
