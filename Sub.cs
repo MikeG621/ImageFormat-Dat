@@ -11,6 +11,7 @@
  */
 
 /* CHANGE LOG
+ * v2.6, 240424
  * [NEW] Format BC3 and BC5 support
  * v2.5, 231218
  * [NEW] Format BC7 support
