@@ -81,9 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SevenZip\Compression\LZMA\Encoder.LenEncoder.cs" />
-    <None Include="DAT_Image_File.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="DAT_Image_File.txt" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -93,9 +91,9 @@
     <Content Include="MIT License.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Readme.txt">
+    <None Include="Readme.md">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
